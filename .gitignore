@@ -1,3 +1,4 @@
 _out
 **/bin
 *.test
+config.json
