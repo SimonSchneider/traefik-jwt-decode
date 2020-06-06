@@ -23,7 +23,7 @@ const (
 	randomClaim       = "rnd-claim"
 	randomClaimHeader = "test-token-random-claim"
 	authHeaderKey     = "Authorization"
-	authKeyID         = "auth#0"
+	jwksKeyID         = "auth#0"
 )
 
 var (
@@ -108,7 +108,7 @@ func benchmarkToken(b *testing.B) {
 func options() jws.Option {
 	h := jws.NewHeaders()
 	h.Set(jws.TypeKey, "JWT")
-	h.Set(jws.KeyIDKey, authKeyID)
+	h.Set(jws.KeyIDKey, jwksKeyID)
 	return jws.WithHeaders(h)
 }
 

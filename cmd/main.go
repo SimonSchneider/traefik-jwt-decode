@@ -61,7 +61,7 @@ type config struct {
 }
 
 func parseConfig() (conf config, err error) {
-	claimMappingFilePath := getEnvDefault("CLAIM_MAPPING_FILE", defaultClaimMappingFilePath)
+	claimMappingFilePath := getEnvDefault("CLAIM_MAPPING_FILE_PATH", defaultClaimMappingFilePath)
 	claimMappingFile, err := os.Open(claimMappingFilePath)
 	if err != nil {
 		return config{}, err
@@ -71,7 +71,7 @@ func parseConfig() (conf config, err error) {
 	if err != nil {
 		return config{}, err
 	}
-	conf.jwksKeyID = getEnvDefault("AUTH_KEY_ID", defaultJwksKeyID)
+	conf.jwksKeyID = getEnvDefault("JWKS_KEY_ID", defaultJwksKeyID)
 	conf.authHeaderKey = getEnvDefault("AUTH_HEADER_KEY", defaultAuthHeaderKey)
 	conf.port = getEnvDefault("PORT", defaultPort)
 	conf.jwksURL, err = getEnv("JWKS_URL")
