@@ -28,7 +28,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get(s.authHeaderKey)
 	t, err := s.decoder.Decode(strings.TrimPrefix(authHeader, "Bearer "))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("unable to validate token %v\n", err)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}

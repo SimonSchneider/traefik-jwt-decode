@@ -24,13 +24,13 @@ func RemoteKeySupplier(jwksURL string, keyID string) KeySupplier {
 func getKeyFrom(jwksURL string, keyID string) (interface{}, error) {
 	var key interface{}
 	if jwks, err := jwk.FetchHTTP(jwksURL); err != nil {
-		return nil, fmt.Errorf("failed to fetch jwks: %s", err)
+		return nil, fmt.Errorf("jwks: failed to fetch from url %s", err)
 	} else if keys := jwks.LookupKeyID(keyID); len(keys) != 1 {
-		return nil, fmt.Errorf("invalid number of %q found: %d", keyID, len(keys))
+		return nil, fmt.Errorf("jwks: invalid number of keys with keyID %s found: %d", keyID, len(keys))
 	} else if usage := keys[0].KeyUsage(); usage != string(jwk.ForSignature) {
-		return nil, fmt.Errorf("%s: invalid usage %q", keyID, usage)
+		return nil, fmt.Errorf("jwks: key with KeyID %s has invalid usage %s, expected %s", keyID, usage, string(jwk.ForSignature))
 	} else if err = keys[0].Raw(&key); err != nil {
-		return nil, fmt.Errorf("%s: %s", keyID, err)
+		return nil, fmt.Errorf("jwks: key %s unable to decode %v", keyID, err)
 	}
 	return key, nil
 }
@@ -76,7 +76,7 @@ func (d *jwtDecoder) Decode(raw string) (*Token, error) {
 	}
 
 	if !token.Expiration.IsZero() && time.Now().After(token.Expiration) {
-		return nil, fmt.Errorf("access token expired")
+		return nil, fmt.Errorf("token expired")
 	}
 
 	for key, destKey := range d.claimMapping {
@@ -84,7 +84,7 @@ func (d *jwtDecoder) Decode(raw string) (*Token, error) {
 			if strVal, ok := value.(string); ok {
 				token.Claims[destKey] = strVal
 			} else {
-				return nil, fmt.Errorf("unexpected claim type")
+				return nil, fmt.Errorf("unexpected claim type, expected string")
 			}
 		}
 	}

@@ -37,6 +37,9 @@ func main() {
 		done <- struct{}{}
 	}()
 	fmt.Println("server running on", serve)
+	for k, v := range claimMapping {
+		fmt.Printf("mapping claim %s to header %s\n", k, v)
+	}
 	<-done
 }
 
