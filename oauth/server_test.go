@@ -1,4 +1,4 @@
-package main
+package oauth
 
 import (
 	"crypto/rand"
@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SimonSchneider/traefik-jwt-decode/oauth"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
@@ -23,6 +22,8 @@ const (
 	exp               = "exp"
 	randomClaim       = "rnd-claim"
 	randomClaimHeader = "test-token-random-claim"
+	authHeaderKey     = "Authorization"
+	authKeyID         = "auth#0"
 )
 
 var (
@@ -39,11 +40,11 @@ var (
 		"claim3":    "test-token-claim3",
 		randomClaim: randomClaimHeader,
 	}
-	dec, _ = oauth.NewDecoder(func() (interface{}, error) {
+	dec, _ = NewDecoder(func() (interface{}, error) {
 		return pk.PublicKey, nil
 	}, claimMappings)
-	cachedDec, printStats, _ = oauth.NewCachedJwtDecoder(dec)
-	srv, _                   = oauth.NewServer(cachedDec, authHeaderKey)
+	cachedDec, printStats, _ = NewCachedJwtDecoder(dec)
+	srv, _                   = NewServer(cachedDec, authHeaderKey)
 	o                        = options()
 	tokens                   []string
 )
