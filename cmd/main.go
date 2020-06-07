@@ -6,11 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/SimonSchneider/traefik-jwt-decode/oauth"
+	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
 )
 
 const (
-	defaultJwksKeyID            = "auth-#0"
 	defaultAuthHeaderKey        = "Authorization"
 	defaultPort                 = "8080"
 	defaultClaimMappingFilePath = "config.json"
@@ -21,11 +20,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	decoder, err := defaultDecoder(conf)
+	dec, err := defaultDecoder(conf)
 	if err != nil {
 		panic(err)
 	}
-	srv, err := oauth.NewServer(decoder, conf.authHeaderKey)
+	srv, err := decoder.NewServer(dec, conf.authHeaderKey)
 	if err != nil {
 		panic(err)
 	}
@@ -43,17 +42,20 @@ func main() {
 	<-done
 }
 
-func defaultDecoder(conf config) (oauth.JwtDecoder, error) {
-	decoder, err := oauth.NewDecoder(oauth.RemoteKeySupplier(conf.jwksURL, conf.jwksKeyID), conf.claimMapping)
+func defaultDecoder(conf config) (decoder.TokenDecoder, error) {
+	keySupplier, err := decoder.RemoteKeySupplier(conf.jwksURL)
 	if err != nil {
 		return nil, err
 	}
-	cachedDec, _, err := oauth.NewCachedJwtDecoder(decoder)
+	jwsDec, err := decoder.NewJwsDecoder(keySupplier, conf.claimMapping)
+	if err != nil {
+		return nil, err
+	}
+	cachedDec, _, err := decoder.NewCachedJwtDecoder(jwsDec)
 	return cachedDec, err
 }
 
 type config struct {
-	jwksKeyID     string
 	jwksURL       string
 	authHeaderKey string
 	port          string
@@ -71,7 +73,6 @@ func parseConfig() (conf config, err error) {
 	if err != nil {
 		return config{}, err
 	}
-	conf.jwksKeyID = getEnvDefault("JWKS_KEY_ID", defaultJwksKeyID)
 	conf.authHeaderKey = getEnvDefault("AUTH_HEADER_KEY", defaultAuthHeaderKey)
 	conf.port = getEnvDefault("PORT", defaultPort)
 	conf.jwksURL, err = getEnv("JWKS_URL")

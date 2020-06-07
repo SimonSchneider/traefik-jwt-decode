@@ -1,4 +1,4 @@
-package oauth
+package decoder
 
 import (
 	"fmt"
@@ -9,13 +9,13 @@ import (
 // Server is a http handler that will use a decoder to decode the authHeaderKey JWT-Token
 // and put the resulting claims in headers
 type Server struct {
-	decoder       JwtDecoder
+	decoder       TokenDecoder
 	authHeaderKey string
 }
 
 // NewServer returns a new server that will decode the header with key authHeaderKey
-// with the given JwtDecoder decoder.
-func NewServer(decoder JwtDecoder, authHeaderKey string) (*Server, error) {
+// with the given TokenDecoder decoder.
+func NewServer(decoder TokenDecoder, authHeaderKey string) (*Server, error) {
 	return &Server{decoder: decoder, authHeaderKey: authHeaderKey}, nil
 }
 
@@ -28,7 +28,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get(s.authHeaderKey)
 	t, err := s.decoder.Decode(strings.TrimPrefix(authHeader, "Bearer "))
 	if err != nil {
-		fmt.Printf("unable to validate token %v\n", err)
+		fmt.Printf("unable to validate token: %v\n", err)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}

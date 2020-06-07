@@ -1,4 +1,4 @@
-package oauth
+package decoder
 
 import (
 	"crypto/rand"
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,11 +41,12 @@ var (
 		"claim3":    "test-token-claim3",
 		randomClaim: randomClaimHeader,
 	}
-	dec, _ = NewDecoder(func() (interface{}, error) {
+	dec, _ = NewJwsDecoder(func(string) (interface{}, error) {
 		return pk.PublicKey, nil
 	}, claimMappings)
+	uncachedSrv, _           = NewServer(dec, authHeaderKey)
 	cachedDec, printStats, _ = NewCachedJwtDecoder(dec)
-	srv, _                   = NewServer(cachedDec, authHeaderKey)
+	cachedSrv, _             = NewServer(cachedDec, authHeaderKey)
 	o                        = options()
 	tokens                   []string
 )
@@ -57,7 +59,7 @@ func TestToken(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/", nil)
 	req.Header.Add(authHeaderKey, fmt.Sprintf("Bearer %s", token))
 	rr := httptest.NewRecorder()
-	srv.DecodeToken(rr, req)
+	cachedSrv.DecodeToken(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("incorrect response %d", status)
 	}
@@ -89,20 +91,66 @@ func BenchmarkFull(b *testing.B) {
 		}
 		tokens[i] = fmt.Sprintf("Bearer %s", token)
 	}
-	b.Run("benchmark token", benchmarkToken)
+	b.Run("benchmark jws parse", benchmarkJwsParse)
+	b.Run("benchmark jwt parse and verify", benchmarkJwtParseAndVerify)
+	b.Run("benchmark uncached server serial", benchmarkServerSerial(uncachedSrv))
+	b.Run("benchmark uncached server parallel", benchmarkServerParallel(uncachedSrv))
+	b.Run("benchmark cached server serial", benchmarkServerSerial(cachedSrv))
+	b.Run("benchmark cached server parallel", benchmarkServerParallel(cachedSrv))
 	printStats()
 }
 
-func benchmarkToken(b *testing.B) {
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			i := rnd.Intn(nTokens)
-			req, _ := http.NewRequest("GET", "/entries", nil)
-			req.Header.Add("Authorization", tokens[i])
-			rr := httptest.NewRecorder()
-			srv.DecodeToken(rr, req)
+func benchmarkServerSerial(srv *Server) func(b *testing.B) {
+	return func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			decodeFromServer(i%nTokens, srv)
 		}
-	})
+	}
+}
+
+func benchmarkServerParallel(srv *Server) func(b *testing.B) {
+	return func(b *testing.B) {
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				i := rnd.Intn(nTokens)
+				decodeFromServer(i, srv)
+			}
+		})
+	}
+}
+
+func decodeFromServer(i int, srv *Server) {
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.Header.Add("Authorization", tokens[i])
+	rr := httptest.NewRecorder()
+	srv.DecodeToken(rr, req)
+}
+
+func benchmarkJwsParse(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		token := tokens[i%nTokens]
+		k, err := jws.Parse(strings.NewReader(strings.TrimPrefix(token, "Bearer ")))
+		if err != nil {
+			b.Fatalf("unable to decode %v", err)
+		}
+		sign := k.Signatures()[0]
+		if kid := sign.ProtectedHeaders().KeyID(); kid != jwksKeyID {
+			b.Fatalf("incorrect kid %s", kid)
+		}
+	}
+}
+
+func benchmarkJwtParseAndVerify(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		token := tokens[i%nTokens]
+		k, err := jwt.ParseVerify(strings.NewReader(strings.TrimPrefix(token, "Bearer ")), jwa.RS256, pk.PublicKey)
+		if err != nil {
+			b.Fatalf("unable to verify %v", err)
+		}
+		if _, ok := k.Get(randomClaim); !ok {
+			b.Fatalf("couldn't get randomClaimKey")
+		}
+	}
 }
 
 func options() jws.Option {
@@ -124,6 +172,5 @@ func newSignedToken() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return jws.Sign(buf, jwa.RS256, pk, o)
 }
