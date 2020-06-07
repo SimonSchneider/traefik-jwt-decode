@@ -1,4 +1,4 @@
-package decoder
+package decoder_test
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	dt "github.com/SimonSchneider/traefik-jwt-decode/decoder/decodertest"
+	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
 )
 
 const (
@@ -31,18 +31,18 @@ var (
 		"claim3":    "test-token-claim3",
 		randomClaim: randomClaimHeader,
 	}
-	uncachedSrv, cachedSrv *Server
+	uncachedSrv, cachedSrv *decoder.Server
 	tokens                 = make([]string, nTokens, nTokens)
 )
 
 func TestNoAuthHeaderIsOKWithoutTokenHeaders(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/", nil)
 	rr := httptest.NewRecorder()
-	serverTest(func(srv *Server) func(*testing.T) {
+	serverTest(func(srv *decoder.Server) func(*testing.T) {
 		return func(t *testing.T) {
 			srv.DecodeToken(rr, req)
 			status := rr.Result().StatusCode
-			dt.Report(t, status != http.StatusOK, "no token should be ok got %d", status)
+			Report(t, status != http.StatusOK, "no token should be ok got %d", status)
 		}
 	})(t)
 }
@@ -57,39 +57,39 @@ func TestServerResponseCode(t *testing.T) {
 		"Invalid token": {token: invalidRndToken(), code: http.StatusUnauthorized},
 	}
 	for name, tc := range tests {
-		t.Run(name, serverTest(func(srv *Server) func(*testing.T) {
+		t.Run(name, serverTest(func(srv *decoder.Server) func(*testing.T) {
 			return func(t *testing.T) {
 				rr, req := reqFor(tc.token)
 				srv.DecodeToken(rr, req)
 				status := rr.Result().StatusCode
-				dt.Report(t, status != tc.code, "incorrect server response, %d, expected: %d", status, tc.code)
+				Report(t, status != tc.code, "incorrect server response, %d, expected: %d", status, tc.code)
 			}
 		}))
 	}
 }
 
 func TestServerResponseHeaders(t *testing.T) {
-	serverTest(func(srv *Server) func(t *testing.T) {
+	serverTest(func(srv *decoder.Server) func(t *testing.T) {
 		return func(t *testing.T) {
 			rndClaim := strconv.FormatInt(rnd.Int63(), 10)
 			rr, req := reqFor(validToken(rndClaim))
 			srv.DecodeToken(rr, req)
 			headers := rr.Header()
 			rndClaimHeader := headers.Get(randomClaimHeader)
-			dt.Report(t, rndClaim != rndClaimHeader, "incorrect random header %s expected %s", rndClaimHeader, rndClaim)
+			Report(t, rndClaim != rndClaimHeader, "incorrect random header %s expected %s", rndClaimHeader, rndClaim)
 			for claimKey, headerKey := range claimMappings {
 				if headerKey == randomClaimHeader {
 					continue
 				}
 				headerVal := headers.Get(headerKey)
 				claimVal := allClaims[claimKey]
-				dt.Report(t, headerVal != claimVal, "claim '%s=%s' has incorrect val '%s=%s'", claimKey, claimVal, headerKey, headerVal)
+				Report(t, headerVal != claimVal, "claim '%s=%s' has incorrect val '%s=%s'", claimKey, claimVal, headerKey, headerVal)
 			}
 		}
 	})(t)
 }
 
-func serverTest(subTest func(s *Server) func(t *testing.T)) func(t *testing.T) {
+func serverTest(subTest func(s *decoder.Server) func(t *testing.T)) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Run("unCachedServer", subTest(uncachedSrv))
 		t.Run("cachedServer", subTest(cachedSrv))
@@ -106,7 +106,7 @@ func BenchmarkFull(b *testing.B) {
 	b.Run("benchmark cached server parallel", benchmarkServerParallel(cachedSrv))
 }
 
-func benchmarkServerSerial(srv *Server) func(b *testing.B) {
+func benchmarkServerSerial(srv *decoder.Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			req, _ := http.NewRequest("GET", "/", nil)
@@ -117,7 +117,7 @@ func benchmarkServerSerial(srv *Server) func(b *testing.B) {
 	}
 }
 
-func benchmarkServerParallel(srv *Server) func(b *testing.B) {
+func benchmarkServerParallel(srv *decoder.Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
@@ -138,19 +138,19 @@ func reqFor(token []byte) (*httptest.ResponseRecorder, *http.Request) {
 }
 
 func validRndToken() []byte {
-	return dt.NewValidToken(newRndClaims())
+	return NewValidToken(newRndClaims())
 }
 
 func invalidRndToken() []byte {
-	return dt.NewInvalidToken(newRndClaims())
+	return NewInvalidToken(newRndClaims())
 }
 
 func validToken(rndClaimVal string) []byte {
-	return dt.NewValidToken(newClaims(rndClaimVal))
+	return NewValidToken(newClaims(rndClaimVal))
 }
 
 func expiredRndToken() []byte {
-	return dt.NewExpiredToken(newRndClaims())
+	return NewExpiredToken(newRndClaims())
 }
 
 func newRndClaims() map[string]interface{} {
@@ -168,13 +168,13 @@ func newClaims(rndClaimVal string) map[string]interface{} {
 
 func init() {
 	var err error
-	var dec, cachedDec TokenDecoder
-	dec, err = NewJwsDecoder(dt.JwksURL, claimMappings)
-	dt.HandleByPanic(err)
-	cachedDec, err = NewCachedJwtDecoder(dec)
-	dt.HandleByPanic(err)
-	uncachedSrv, err = NewServer(dec, authHeaderKey)
-	dt.HandleByPanic(err)
-	cachedSrv, err = NewServer(cachedDec, authHeaderKey)
-	dt.HandleByPanic(err)
+	var dec, cachedDec decoder.TokenDecoder
+	dec, err = decoder.NewJwsDecoder(JwksURL, claimMappings)
+	HandleByPanic(err)
+	cachedDec = decoder.NewCachedJwtDecoder(cache, dec)
+	HandleByPanic(err)
+	uncachedSrv, err = decoder.NewServer(dec, authHeaderKey)
+	HandleByPanic(err)
+	cachedSrv, err = decoder.NewServer(cachedDec, authHeaderKey)
+	HandleByPanic(err)
 }

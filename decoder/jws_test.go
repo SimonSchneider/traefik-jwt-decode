@@ -1,9 +1,9 @@
-package decoder
+package decoder_test
 
 import (
 	"testing"
 
-	dt "github.com/SimonSchneider/traefik-jwt-decode/decoder/decodertest"
+	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
 )
 
 var (
@@ -16,8 +16,8 @@ var (
 )
 
 func TestInvalidJwksURLFailsFast(t *testing.T) {
-	_, err := NewJwsDecoder("https://this.com/does/not/exist", claimMapping)
-	dt.Report(t, err == nil, "able to create jws decoder with incorrect jwks url")
+	_, err := decoder.NewJwsDecoder("https://this.com/does/not/exist", claimMapping)
+	Report(t, err == nil, "able to create jws decoder with incorrect jwks url")
 }
 
 func TestTokenWithInvalidClaims(t *testing.T) {
@@ -26,10 +26,10 @@ func TestTokenWithInvalidClaims(t *testing.T) {
 		"double": 123.321,
 		"struct": struct{ key string }{key: "123"},
 	}
-	dec, _ := NewJwsDecoder(dt.JwksURL, claimMapping)
+	dec, _ := decoder.NewJwsDecoder(JwksURL, claimMapping)
 	for k, v := range invalidTokens {
-		token := dt.NewValidToken(map[string]interface{}{"email": v})
+		token := NewValidToken(map[string]interface{}{"email": v})
 		resp, err := dec.Decode(string(token))
-		dt.Report(t, err == nil, "able to decode token with unexpected type: (%s : %+v) into %+v", k, v, resp)
+		Report(t, err == nil, "able to decode token with unexpected type: (%s : %+v) into %+v", k, v, resp)
 	}
 }

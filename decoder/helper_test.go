@@ -1,4 +1,4 @@
-package decodertest
+package decoder_test
 
 import (
 	"crypto/rand"
@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -21,6 +22,12 @@ var (
 	JwksURL    string
 	privateKey *rsa.PrivateKey
 	opts       jws.Option
+	cache, _   = ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1e7,     // number of keys to track frequency of (10M).
+		MaxCost:     1 << 30, // maximum cost of cache (1GB).
+		BufferItems: 64,      // number of keys per Get buffer.
+		Metrics:     true,
+	})
 )
 
 func init() {
