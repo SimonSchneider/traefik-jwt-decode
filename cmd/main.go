@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
+	"github.com/dgraph-io/ristretto"
 )
 
 const (
@@ -47,7 +48,13 @@ func defaultDecoder(conf config) (decoder.TokenDecoder, error) {
 	if err != nil {
 		return nil, err
 	}
-	cachedDec, err := decoder.NewCachedJwtDecoder(jwsDec)
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1e7,     // number of keys to track frequency of (10M).
+		MaxCost:     1 << 30, // maximum cost of cache (1GB).
+		BufferItems: 64,      // number of keys per Get buffer.
+		Metrics:     true,
+	})
+	cachedDec := decoder.NewCachedJwtDecoder(cache, jwsDec)
 	return cachedDec, err
 }
 
