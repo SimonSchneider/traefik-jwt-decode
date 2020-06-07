@@ -21,10 +21,10 @@ docker run -v $(pwd)/config.json:/config/config.json -e JWKS_URL="http://some.co
 
 available configuration:
 
-| Type | Configuration               | Description                                                                        | Example                                                      | Default               |
-| ---- | --------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------- |
-| env  | `PORT`                      | port to run the server on                                                          | `8080`                                                       | `8080`                |
-| env  | `JWKS_URL`                  | url pointing at the jwks json file (https://auth0.com/docs/tokens/concepts/jwks)   | http://some.com/.well-known/jwks.json                        | Required              |
-| file | `/$CLAIM_MAPPING_FILE_PATH` | json file located at `$CLAIM_MAPPING_FILE_PATH` containing claim to header mapping | `{"claimKey-1": "headerKey-1", "claimKey-2": "headerKey-2"}` | Required              |
-| env  | `CLAIM_MAPPING_FILE_PATH`   | path to the claim mapping json file                                                | `/config/config.json`                                        | `/config/config.json` |
-| env  | `AUTH_HEADER_KEY`           | Authorization Header Key Containing the token                                      | `Authorization`                                              | `Authorization`       |
+| Type | Configuration               | Description                                                                        | Example                                                      | Default         |
+| ---- | --------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------- |
+| env  | `PORT`                      | port to run the server on                                                          | `8080`                                                       | `8080`          |
+| env  | `JWKS_URL`                  | url pointing at the jwks json file (https://auth0.com/docs/tokens/concepts/jwks)   | http://some.com/.well-known/jwks.json                        | Required        |
+| file | `/$CLAIM_MAPPING_FILE_PATH` | json file located at `$CLAIM_MAPPING_FILE_PATH` containing claim to header mapping | `{"claimKey-1": "headerKey-1", "claimKey-2": "headerKey-2"}` | Required        |
+| env  | `CLAIM_MAPPING_FILE_PATH`   | path to the claim mapping json file                                                | `config.json`                                                | `config.json`   |
+| env  | `AUTH_HEADER_KEY`           | Authorization Header Key Containing the token                                      | `Authorization`                                              | `Authorization` |
