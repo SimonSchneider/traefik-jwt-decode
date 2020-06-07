@@ -1,12 +1,10 @@
 mode: atomic
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:15.71,22.16 2 3
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:25.2,26.21 2 3
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:22.16,24.3 1 0
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:29.63,30.35 1 8
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:34.2,35.16 2 7
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:38.2,39.19 2 4
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:30.35,33.3 2 1
-github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:35.16,37.3 1 3
+github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:20.71,27.16 2 4
+github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:30.2,31.21 2 4
+github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:27.16,29.3 1 0
+github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:34.63,35.35 1 10
+github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:39.2,42.19 4 7
+github.com/SimonSchneider/traefik-jwt-decode/decoder/cached.go:35.35,38.3 2 3
 github.com/SimonSchneider/traefik-jwt-decode/decoder/decoder.go:20.34,21.62 1 6
 github.com/SimonSchneider/traefik-jwt-decode/decoder/decoder.go:24.2,24.12 1 4
 github.com/SimonSchneider/traefik-jwt-decode/decoder/decoder.go:21.62,23.3 1 2

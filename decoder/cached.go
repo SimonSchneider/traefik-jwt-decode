@@ -11,6 +11,11 @@ type cachedJwtDecoder struct {
 	delegate TokenDecoder
 }
 
+type cacheVal struct {
+	token *Token
+	err   error
+}
+
 // NewCachedJwtDecoder returns a new JwtDecoder that will cache Tokens decoded by the delegate
 func NewCachedJwtDecoder(delegate TokenDecoder) (TokenDecoder, error) {
 	cache, err := ristretto.NewCache(&ristretto.Config{
@@ -28,13 +33,11 @@ func NewCachedJwtDecoder(delegate TokenDecoder) (TokenDecoder, error) {
 
 func (d *cachedJwtDecoder) Decode(raw string) (*Token, error) {
 	if t, ok := d.cache.Get(raw); ok {
-		token := t.(*Token)
-		return token, nil
+		fromCache := t.(*cacheVal)
+		return fromCache.token, fromCache.err
 	}
 	token, err := d.delegate.Decode(raw)
-	if err != nil {
-		return nil, err
-	}
-	d.cache.SetWithTTL(raw, token, 100, 10*time.Minute)
-	return token, nil
+	toCache := &cacheVal{token: token, err: err}
+	d.cache.SetWithTTL(raw, toCache, 100, 10*time.Minute)
+	return token, err
 }
