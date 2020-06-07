@@ -13,7 +13,7 @@ type cachedJwtDecoder struct {
 }
 
 // NewCachedJwtDecoder returns a new JwtDecoder that will cache Tokens decoded by the delegate
-func NewCachedJwtDecoder(delegate TokenDecoder) (TokenDecoder, func(), error) {
+func NewCachedJwtDecoder(delegate TokenDecoder) (TokenDecoder, error) {
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,     // number of keys to track frequency of (10M).
 		MaxCost:     1 << 30, // maximum cost of cache (1GB).
@@ -21,10 +21,10 @@ func NewCachedJwtDecoder(delegate TokenDecoder) (TokenDecoder, func(), error) {
 		Metrics:     true,
 	})
 	if err != nil {
-		return nil, func() {}, err
+		return nil, err
 	}
 	decoder := &cachedJwtDecoder{cache: cache, delegate: delegate}
-	return decoder, decoder.printStats, nil
+	return decoder, nil
 }
 
 func (d *cachedJwtDecoder) Decode(raw string) (*Token, error) {

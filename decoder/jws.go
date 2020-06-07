@@ -1,17 +1,7 @@
 package decoder
 
-/*
-JWT - interface
-headers: typ + cty
-
-JWS implementation of JWT
-headers: kid + alg
-
-JWE implementation of JWT
-*/
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwk"
@@ -19,27 +9,8 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
-// KeySupplier supplies public keys for use in the JWT decoder
-type KeySupplier func(keyID string) (key interface{}, err error)
-
-// RemoteKeySupplier the default KeySupplier to be used
-func RemoteKeySupplier(jwksURL string) (KeySupplier, error) {
-	jwks, err := jwk.FetchHTTP(jwksURL)
-	if err != nil {
-		return nil, fmt.Errorf("jwks: failed to fetch from url %s", err)
-	}
-	return func(keyID string) (rawKey interface{}, err error) {
-		keys := jwks.LookupKeyID(keyID)
-		if len(keys) != 1 {
-			return nil, fmt.Errorf("jwks: invalid number of keys with keyID %s found: %d", keyID, len(keys))
-		}
-		err = keys[0].Raw(&rawKey)
-		return
-	}, nil
-}
-
 type jwsDecoder struct {
-	keys         KeySupplier
+	jwks         *jwk.Set
 	claimMapping map[string]string
 }
 
@@ -47,8 +18,12 @@ type jwsDecoder struct {
 // It will also map the claims via the claim mapping
 // `claimMapping = map[string][string]{ "key123", "headerKey123" }`
 // will cause the claim `key123` in the JWS token to be mapped to `headerKey123` in the decoded token
-func NewJwsDecoder(keySupplier KeySupplier, claimMapping map[string]string) (TokenDecoder, error) {
-	return &jwsDecoder{keys: keySupplier, claimMapping: claimMapping}, nil
+func NewJwsDecoder(jwksURL string, claimMapping map[string]string) (TokenDecoder, error) {
+	jwks, err := jwk.FetchHTTP(jwksURL)
+	if err != nil {
+		return nil, fmt.Errorf("jwks: failed to fetch from url %s", err)
+	}
+	return &jwsDecoder{jwks: jwks, claimMapping: claimMapping}, nil
 }
 
 func (d *jwsDecoder) Decode(rawJws string) (*Token, error) {
@@ -76,19 +51,9 @@ func (d *jwsDecoder) Decode(rawJws string) (*Token, error) {
 }
 
 func (d *jwsDecoder) parseAndValidate(rawJws string) (jwt.Token, error) {
-	t, err := jws.Parse(strings.NewReader(rawJws))
+	_, err := jws.VerifyWithJWKSet([]byte(rawJws), d.jwks, nil)
 	if err != nil {
 		return nil, err
 	}
-	if len(t.Signatures()) != 1 {
-		return nil, fmt.Errorf("too many signatures")
-	}
-	headers := t.Signatures()[0].ProtectedHeaders()
-	kid := headers.KeyID()
-	alg := headers.Algorithm()
-	key, err := d.keys(kid)
-	if err != nil {
-		return nil, err
-	}
-	return jwt.ParseVerify(strings.NewReader(rawJws), alg, key)
+	return jwt.ParseString(rawJws)
 }

@@ -43,15 +43,11 @@ func main() {
 }
 
 func defaultDecoder(conf config) (decoder.TokenDecoder, error) {
-	keySupplier, err := decoder.RemoteKeySupplier(conf.jwksURL)
+	jwsDec, err := decoder.NewJwsDecoder(conf.jwksURL, conf.claimMapping)
 	if err != nil {
 		return nil, err
 	}
-	jwsDec, err := decoder.NewJwsDecoder(keySupplier, conf.claimMapping)
-	if err != nil {
-		return nil, err
-	}
-	cachedDec, _, err := decoder.NewCachedJwtDecoder(jwsDec)
+	cachedDec, err := decoder.NewCachedJwtDecoder(jwsDec)
 	return cachedDec, err
 }
 

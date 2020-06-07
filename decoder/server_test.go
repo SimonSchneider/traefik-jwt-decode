@@ -1,30 +1,21 @@
 package decoder
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"encoding/json"
 	"fmt"
 	rnd "math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jws"
-	"github.com/lestrrat-go/jwx/jwt"
+	dt "github.com/SimonSchneider/traefik-jwt-decode/decoder/decodertest"
 )
 
 const (
 	nTokens           = 5000
-	exp               = "exp"
 	randomClaim       = "rnd-claim"
 	randomClaimHeader = "test-token-random-claim"
 	authHeaderKey     = "Authorization"
-	jwksKeyID         = "auth#0"
 )
 
 var (
@@ -34,76 +25,82 @@ var (
 		"claim3":     "claim number 3",
 		"otherClaim": "this-claim-is-not-set",
 	}
-	pk, _         = rsa.GenerateKey(rand.Reader, 2048)
 	claimMappings = map[string]string{
 		"claim1":    "test-token-claim1",
 		"claim2":    "test-token-claim2",
 		"claim3":    "test-token-claim3",
 		randomClaim: randomClaimHeader,
 	}
-	dec, _ = NewJwsDecoder(func(string) (interface{}, error) {
-		return pk.PublicKey, nil
-	}, claimMappings)
-	uncachedSrv, _           = NewServer(dec, authHeaderKey)
-	cachedDec, printStats, _ = NewCachedJwtDecoder(dec)
-	cachedSrv, _             = NewServer(cachedDec, authHeaderKey)
-	o                        = options()
-	tokens                   []string
+	uncachedSrv, cachedSrv *Server
+	tokens                 = make([]string, nTokens, nTokens)
 )
 
-func TestToken(t *testing.T) {
-	token, err := newSignedToken()
-	if err != nil {
-		t.Errorf("couldn't create token %v", err)
+func TestServerResponseCode(t *testing.T) {
+	tests := map[string]struct {
+		token []byte
+		code  int
+	}{
+		"Valid token":   {token: validRndToken(), code: http.StatusOK},
+		"Expired token": {token: expiredRndToken(), code: http.StatusUnauthorized},
+		"Invalid token": {token: invalidRndToken(), code: http.StatusUnauthorized},
 	}
-	req, _ := http.NewRequest("GET", "/", nil)
-	req.Header.Add(authHeaderKey, fmt.Sprintf("Bearer %s", token))
-	rr := httptest.NewRecorder()
-	cachedSrv.DecodeToken(rr, req)
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("incorrect response %d", status)
+	for name, tc := range tests {
+		t.Run(name, serverTest(func(srv *Server) func(t *testing.T) {
+			return func(t *testing.T) {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add(authHeaderKey, fmt.Sprintf("Bearer %s", tc.token))
+				rr := httptest.NewRecorder()
+				srv.DecodeToken(rr, req)
+				status := rr.Result().StatusCode
+				dt.Report(t, status != tc.code, "incorrect server response, %d, expected: %d", status, tc.code)
+			}
+		}))
 	}
-	headers := rr.Header()
-	if val := headers.Get(randomClaimHeader); val == "" {
-		t.Fatal("random header not found in response", val)
-	}
-	for claimKey, headerKey := range claimMappings {
-		if headerKey == randomClaimHeader {
-			continue
+}
+
+func TestServerResponseHeaders(t *testing.T) {
+	serverTest(func(srv *Server) func(t *testing.T) {
+		return func(t *testing.T) {
+			rndClaim := strconv.FormatInt(rnd.Int63(), 10)
+			rr, req := reqFor(validToken(rndClaim))
+			srv.DecodeToken(rr, req)
+			headers := rr.Header()
+			rndClaimHeader := headers.Get(randomClaimHeader)
+			dt.Report(t, rndClaim != rndClaimHeader, "incorrect random header %s expected %s", rndClaimHeader, rndClaim)
+			for claimKey, headerKey := range claimMappings {
+				if headerKey == randomClaimHeader {
+					continue
+				}
+				headerVal := headers.Get(headerKey)
+				claimVal := allClaims[claimKey]
+				dt.Report(t, headerVal != claimVal, "claim '%s=%s' has incorrect val '%s=%s'", claimKey, claimVal, headerKey, headerVal)
+			}
 		}
-		headerVal := headers.Get(headerKey)
-		if headerVal == "" {
-			t.Fatalf("claim %s not found in header", headerKey)
-		}
-		claimVal := allClaims[claimKey]
-		if headerVal != claimVal {
-			t.Fatalf("claim %s has incorrect value %s, expected %s", claimKey, headerVal, claimVal)
-		}
+	})(t)
+}
+
+func serverTest(subTest func(s *Server) func(t *testing.T)) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Run("unCachedServer", subTest(uncachedSrv))
+		t.Run("cachedServer", subTest(cachedSrv))
 	}
 }
 
 func BenchmarkFull(b *testing.B) {
-	tokens = make([]string, nTokens, nTokens)
 	for i := 0; i < nTokens; i++ {
-		token, err := newSignedToken()
-		if err != nil {
-			panic(err)
-		}
-		tokens[i] = fmt.Sprintf("Bearer %s", token)
+		tokens[i] = fmt.Sprintf("Bearer %s", validRndToken())
 	}
-	b.Run("benchmark jws parse", benchmarkJwsParse)
-	b.Run("benchmark jwt parse and verify", benchmarkJwtParseAndVerify)
 	b.Run("benchmark uncached server serial", benchmarkServerSerial(uncachedSrv))
 	b.Run("benchmark uncached server parallel", benchmarkServerParallel(uncachedSrv))
 	b.Run("benchmark cached server serial", benchmarkServerSerial(cachedSrv))
 	b.Run("benchmark cached server parallel", benchmarkServerParallel(cachedSrv))
-	printStats()
 }
 
 func benchmarkServerSerial(srv *Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			decodeFromServer(i%nTokens, srv)
+			rr, req := reqFor([]byte(tokens[i%nTokens]))
+			srv.DecodeToken(rr, req)
 		}
 	}
 }
@@ -112,65 +109,58 @@ func benchmarkServerParallel(srv *Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				i := rnd.Intn(nTokens)
-				decodeFromServer(i, srv)
+				rr, req := reqFor([]byte(tokens[rnd.Intn(nTokens)]))
+				srv.DecodeToken(rr, req)
 			}
 		})
 	}
 }
 
-func decodeFromServer(i int, srv *Server) {
+func reqFor(token []byte) (*httptest.ResponseRecorder, *http.Request) {
 	req, _ := http.NewRequest("GET", "/", nil)
-	req.Header.Add("Authorization", tokens[i])
+	req.Header.Add(authHeaderKey, fmt.Sprintf("Bearer %s", token))
 	rr := httptest.NewRecorder()
-	srv.DecodeToken(rr, req)
+	return rr, req
 }
 
-func benchmarkJwsParse(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		token := tokens[i%nTokens]
-		k, err := jws.Parse(strings.NewReader(strings.TrimPrefix(token, "Bearer ")))
-		if err != nil {
-			b.Fatalf("unable to decode %v", err)
-		}
-		sign := k.Signatures()[0]
-		if kid := sign.ProtectedHeaders().KeyID(); kid != jwksKeyID {
-			b.Fatalf("incorrect kid %s", kid)
-		}
-	}
+func validRndToken() []byte {
+	return dt.NewValidToken(newRndClaims())
 }
 
-func benchmarkJwtParseAndVerify(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		token := tokens[i%nTokens]
-		k, err := jwt.ParseVerify(strings.NewReader(strings.TrimPrefix(token, "Bearer ")), jwa.RS256, pk.PublicKey)
-		if err != nil {
-			b.Fatalf("unable to verify %v", err)
-		}
-		if _, ok := k.Get(randomClaim); !ok {
-			b.Fatalf("couldn't get randomClaimKey")
-		}
-	}
+func invalidRndToken() []byte {
+	return dt.NewInvalidToken(newRndClaims())
 }
 
-func options() jws.Option {
-	h := jws.NewHeaders()
-	h.Set(jws.TypeKey, "JWT")
-	h.Set(jws.KeyIDKey, jwksKeyID)
-	return jws.WithHeaders(h)
+func validToken(rndClaimVal string) []byte {
+	return dt.NewValidToken(newClaims(rndClaimVal))
 }
 
-func newSignedToken() ([]byte, error) {
-	t := jwt.New()
+func expiredRndToken() []byte {
+	return dt.NewExpiredToken(newRndClaims())
+}
+
+func newRndClaims() map[string]string {
+	return newClaims(strconv.FormatInt(rnd.Int63(), 10))
+}
+
+func newClaims(rndClaimVal string) map[string]string {
+	claims := make(map[string]string)
 	for k, v := range allClaims {
-		t.Set(k, v)
+		claims[k] = v
 	}
-	t.Set(exp, time.Now().Add(time.Hour*24))
-	t.Set(randomClaim, strconv.FormatInt(rnd.Int63(), 10))
+	claims[randomClaim] = rndClaimVal
+	return claims
+}
 
-	buf, err := json.MarshalIndent(t, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return jws.Sign(buf, jwa.RS256, pk, o)
+func init() {
+	var err error
+	var dec, cachedDec TokenDecoder
+	dec, err = NewJwsDecoder(dt.JwksUrl, claimMappings)
+	dt.HandleByPanic(err)
+	cachedDec, err = NewCachedJwtDecoder(dec)
+	dt.HandleByPanic(err)
+	uncachedSrv, err = NewServer(dec, authHeaderKey)
+	dt.HandleByPanic(err)
+	cachedSrv, err = NewServer(cachedDec, authHeaderKey)
+	dt.HandleByPanic(err)
 }
