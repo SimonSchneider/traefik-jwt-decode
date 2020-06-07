@@ -35,6 +35,18 @@ var (
 	tokens                 = make([]string, nTokens, nTokens)
 )
 
+func TestNoAuthHeaderIsOKWithoutTokenHeaders(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/", nil)
+	rr := httptest.NewRecorder()
+	serverTest(func(srv *Server) func(*testing.T) {
+		return func(t *testing.T) {
+			srv.DecodeToken(rr, req)
+			status := rr.Result().StatusCode
+			dt.Report(t, status != http.StatusOK, "no token should be ok got %d", status)
+		}
+	})(t)
+}
+
 func TestServerResponseCode(t *testing.T) {
 	tests := map[string]struct {
 		token []byte
@@ -45,11 +57,9 @@ func TestServerResponseCode(t *testing.T) {
 		"Invalid token": {token: invalidRndToken(), code: http.StatusUnauthorized},
 	}
 	for name, tc := range tests {
-		t.Run(name, serverTest(func(srv *Server) func(t *testing.T) {
+		t.Run(name, serverTest(func(srv *Server) func(*testing.T) {
 			return func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "/", nil)
-				req.Header.Add(authHeaderKey, fmt.Sprintf("Bearer %s", tc.token))
-				rr := httptest.NewRecorder()
+				rr, req := reqFor(tc.token)
 				srv.DecodeToken(rr, req)
 				status := rr.Result().StatusCode
 				dt.Report(t, status != tc.code, "incorrect server response, %d, expected: %d", status, tc.code)
@@ -139,12 +149,12 @@ func expiredRndToken() []byte {
 	return dt.NewExpiredToken(newRndClaims())
 }
 
-func newRndClaims() map[string]string {
+func newRndClaims() map[string]interface{} {
 	return newClaims(strconv.FormatInt(rnd.Int63(), 10))
 }
 
-func newClaims(rndClaimVal string) map[string]string {
-	claims := make(map[string]string)
+func newClaims(rndClaimVal string) map[string]interface{} {
+	claims := make(map[string]interface{})
 	for k, v := range allClaims {
 		claims[k] = v
 	}

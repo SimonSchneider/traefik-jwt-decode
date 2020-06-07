@@ -1,7 +1,6 @@
 package decoder
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -39,11 +38,4 @@ func (d *cachedJwtDecoder) Decode(raw string) (*Token, error) {
 	expiresIn := token.Expiration.Sub(time.Now())
 	d.cache.SetWithTTL(raw, token, 100, expiresIn-time.Second*120)
 	return token, nil
-}
-
-func (d *cachedJwtDecoder) printStats() {
-	m := d.cache.Metrics
-	fmt.Printf("ratio %f\n", m.Ratio())
-	fmt.Printf("hits %d\n", m.Hits())
-	fmt.Printf("misses %d\n", m.Misses())
 }

@@ -67,21 +67,21 @@ func startJwksServer() string {
 }
 
 // NewValidToken generates a signed valid token with the given claims
-func NewValidToken(claims map[string]string) []byte {
+func NewValidToken(claims map[string]interface{}) []byte {
 	return newSignedToken(claims, time.Now().Add(time.Hour*24), PrivateKey)
 }
 
 // NewExpiredToken generates a signed but expired token with the given claims
-func NewExpiredToken(claims map[string]string) []byte {
+func NewExpiredToken(claims map[string]interface{}) []byte {
 	return newSignedToken(claims, time.Now().Add(-time.Hour*24), PrivateKey)
 }
 
-func NewInvalidToken(claims map[string]string) []byte {
+func NewInvalidToken(claims map[string]interface{}) []byte {
 	privKey, _ := generateKey()
 	return newSignedToken(claims, time.Now().Add(time.Hour*24), privKey)
 }
 
-func newSignedToken(claims map[string]string, exp time.Time, key *rsa.PrivateKey) []byte {
+func newSignedToken(claims map[string]interface{}, exp time.Time, key *rsa.PrivateKey) []byte {
 	t := jwt.New()
 	for k, v := range claims {
 		t.Set(k, v)
