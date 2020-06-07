@@ -43,6 +43,7 @@ func generateKey() (*rsa.PrivateKey, jwk.Key) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	HandleByPanic(err)
 	jwkKey, err := jwk.New(privKey.PublicKey)
+	HandleByPanic(err)
 	jwk.AssignKeyID(jwkKey)
 	jwkKey.Set(jwk.AlgorithmKey, jwa.RS256)
 	jwkKey.Set(jwk.KeyUsageKey, jwk.ForSignature)
