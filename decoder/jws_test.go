@@ -15,7 +15,7 @@ var (
 	}
 )
 
-func TestInvalidJwksUrlFailsFast(t *testing.T) {
+func TestInvalidJwksURLFailsFast(t *testing.T) {
 	_, err := NewJwsDecoder("https://this.com/does/not/exist", claimMapping)
 	dt.Report(t, err == nil, "able to create jws decoder with incorrect jwks url")
 }
@@ -26,7 +26,7 @@ func TestTokenWithInvalidClaims(t *testing.T) {
 		"double": 123.321,
 		"struct": struct{ key string }{key: "123"},
 	}
-	dec, _ := NewJwsDecoder(dt.JwksUrl, claimMapping)
+	dec, _ := NewJwsDecoder(dt.JwksURL, claimMapping)
 	for k, v := range invalidTokens {
 		token := dt.NewValidToken(map[string]interface{}{"email": v})
 		resp, err := dec.Decode(string(token))

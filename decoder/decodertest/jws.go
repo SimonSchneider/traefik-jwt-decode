@@ -17,20 +17,19 @@ import (
 )
 
 var (
-	PrivateKey *rsa.PrivateKey
-	JwkKey     jwk.Key
-	JwkKeyID   string
+	// JwksURL is where the JWKS is hosted
+	JwksURL    string
+	privateKey *rsa.PrivateKey
 	opts       jws.Option
-	JwksUrl    string
-	Jwks       *jwk.Set
 )
 
 func init() {
-	PrivateKey, JwkKey = generateKey()
-	JwkKeyID = JwkKey.KeyID()
-	opts = options(JwkKeyID)
-	Jwks = &jwk.Set{Keys: []jwk.Key{JwkKey}}
-	JwksUrl = startJwksServer()
+	var jwkKey jwk.Key
+	privateKey, jwkKey = generateKey()
+	jwkKeyID := jwkKey.KeyID()
+	opts = options(jwkKeyID)
+	jwks := &jwk.Set{Keys: []jwk.Key{jwkKey}}
+	JwksURL = startJwksServer(jwks)
 }
 
 func options(kid string) jws.Option {
@@ -50,8 +49,8 @@ func generateKey() (*rsa.PrivateKey, jwk.Key) {
 	return privKey, jwkKey
 }
 
-func startJwksServer() string {
-	keys, err := json.Marshal(Jwks)
+func startJwksServer(jwks *jwk.Set) string {
+	keys, err := json.Marshal(jwks)
 	HandleByPanic(err)
 	listener, err := net.Listen("tcp", ":0")
 	HandleByPanic(err)
@@ -68,14 +67,15 @@ func startJwksServer() string {
 
 // NewValidToken generates a signed valid token with the given claims
 func NewValidToken(claims map[string]interface{}) []byte {
-	return newSignedToken(claims, time.Now().Add(time.Hour*24), PrivateKey)
+	return newSignedToken(claims, time.Now().Add(time.Hour*24), privateKey)
 }
 
 // NewExpiredToken generates a signed but expired token with the given claims
 func NewExpiredToken(claims map[string]interface{}) []byte {
-	return newSignedToken(claims, time.Now().Add(-time.Hour*24), PrivateKey)
+	return newSignedToken(claims, time.Now().Add(-time.Hour*24), privateKey)
 }
 
+// NewInvalidToken generates a token signed with a key that does not exist in the JWKS
 func NewInvalidToken(claims map[string]interface{}) []byte {
 	privKey, _ := generateKey()
 	return newSignedToken(claims, time.Now().Add(time.Hour*24), privKey)
@@ -94,12 +94,14 @@ func newSignedToken(claims map[string]interface{}, exp time.Time, key *rsa.Priva
 	return token
 }
 
-func Report(t *testing.T, pred bool, message string, args ...interface{}) {
-	if pred {
+// Report the error message to testing if the condition is met
+func Report(t *testing.T, condition bool, message string, args ...interface{}) {
+	if condition {
 		t.Fatalf(message, args...)
 	}
 }
 
+// HandleByPanic handles a non nil error by panicing
 func HandleByPanic(err error) {
 	if err != nil {
 		panic(err)

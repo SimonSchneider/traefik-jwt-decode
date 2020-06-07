@@ -169,7 +169,7 @@ func newClaims(rndClaimVal string) map[string]interface{} {
 func init() {
 	var err error
 	var dec, cachedDec TokenDecoder
-	dec, err = NewJwsDecoder(dt.JwksUrl, claimMappings)
+	dec, err = NewJwsDecoder(dt.JwksURL, claimMappings)
 	dt.HandleByPanic(err)
 	cachedDec, err = NewCachedJwtDecoder(dec)
 	dt.HandleByPanic(err)
