@@ -2,7 +2,6 @@ package decoder
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
@@ -34,9 +33,6 @@ func (d *jwsDecoder) Decode(rawJws string) (*Token, error) {
 	token := &Token{
 		Expiration: jwtToken.Expiration(),
 		Claims:     make(map[string]string),
-	}
-	if !token.Expiration.IsZero() && time.Now().After(token.Expiration) {
-		return nil, fmt.Errorf("token expired")
 	}
 	for key, destKey := range d.claimMapping {
 		if value, ok := jwtToken.Get(key); ok {

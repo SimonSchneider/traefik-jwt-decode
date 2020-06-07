@@ -35,7 +35,6 @@ func (d *cachedJwtDecoder) Decode(raw string) (*Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	expiresIn := token.Expiration.Sub(time.Now())
-	d.cache.SetWithTTL(raw, token, 100, expiresIn-time.Second*120)
+	d.cache.SetWithTTL(raw, token, 100, 10*time.Minute)
 	return token, nil
 }
