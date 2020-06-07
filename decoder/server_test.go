@@ -109,7 +109,9 @@ func BenchmarkFull(b *testing.B) {
 func benchmarkServerSerial(srv *Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			rr, req := reqFor([]byte(tokens[i%nTokens]))
+			req, _ := http.NewRequest("GET", "/", nil)
+			req.Header.Add(authHeaderKey, tokens[i%nTokens])
+			rr := httptest.NewRecorder()
 			srv.DecodeToken(rr, req)
 		}
 	}
@@ -119,7 +121,9 @@ func benchmarkServerParallel(srv *Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				rr, req := reqFor([]byte(tokens[rnd.Intn(nTokens)]))
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add(authHeaderKey, tokens[rnd.Intn(nTokens)])
+				rr := httptest.NewRecorder()
 				srv.DecodeToken(rr, req)
 			}
 		})
