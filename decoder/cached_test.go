@@ -1,6 +1,7 @@
 package decoder_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ func TestCacheAllResponses(t *testing.T) {
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			delegate := newMock(func(raw string) (*decoder.Token, error) {
+			delegate := newMock(func(ctx context.Context, raw string) (*decoder.Token, error) {
 				return tc.token, tc.err
 			})
 			dec := decoder.NewCachedJwtDecoder(cache, delegate)
@@ -31,23 +32,22 @@ func TestCacheAllResponses(t *testing.T) {
 }
 
 func getAndCompareCached(t *testing.T, name string, dec decoder.TokenDecoder, delegate *decoderMock, expectedToken *decoder.Token, expectedError error, expectedCalls int) {
-	token, err := dec.Decode(name)
+	token, err := dec.Decode(context.Background(), name)
 	Report(t, err != expectedError, "got unexpected error %v from cache expected %v", err, expectedError)
 	Report(t, token != expectedToken, "got unexpected token %v from cache expected %v", token, expectedToken)
 	Report(t, delegate.calls != expectedCalls, "incorrect number of calls to delegate %d expected %d", delegate.calls, expectedCalls)
 }
 
-type DecodeFunc func(raw string) (*decoder.Token, error)
+type DecodeFunc func(ctx context.Context, raw string) (*decoder.Token, error)
 
 type decoderMock struct {
 	calls    int
 	delegate DecodeFunc
 }
 
-func (d *decoderMock) Decode(raw string) (*decoder.Token, error) {
+func (d *decoderMock) Decode(ctx context.Context, raw string) (*decoder.Token, error) {
 	d.calls = d.calls + 1
-	fmt.Println("called with", raw)
-	return d.delegate(raw)
+	return d.delegate(ctx, raw)
 }
 
 func newMock(delegate DecodeFunc) *decoderMock {
