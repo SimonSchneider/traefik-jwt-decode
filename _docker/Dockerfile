@@ -1,5 +1,5 @@
 FROM scratch
-COPY --chown=0:0 bin/main /
+COPY --chown=0:0 main /
 USER 65534
 
 VOLUME ["/config"]
