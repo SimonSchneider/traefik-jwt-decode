@@ -18,11 +18,7 @@ import (
 )
 
 var (
-	// JwksURL is where the JWKS is hosted
-	JwksURL    string
-	privateKey *rsa.PrivateKey
-	opts       jws.Option
-	cache, _   = ristretto.NewCache(&ristretto.Config{
+	cache, _ = ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,     // number of keys to track frequency of (10M).
 		MaxCost:     1 << 30, // maximum cost of cache (1GB).
 		BufferItems: 64,      // number of keys per Get buffer.
@@ -30,13 +26,22 @@ var (
 	})
 )
 
-func init() {
+type TestConfig struct {
+	// JwksURL is where the JWKS is hosted
+	JwksURL    string
+	privateKey *rsa.PrivateKey
+	opts       jws.Option
+}
+
+func newTest() *TestConfig {
 	var jwkKey jwk.Key
-	privateKey, jwkKey = generateKey()
+	tc := &TestConfig{}
+	tc.privateKey, jwkKey = generateKey()
 	jwkKeyID := jwkKey.KeyID()
-	opts = options(jwkKeyID)
+	tc.opts = options(jwkKeyID)
 	jwks := &jwk.Set{Keys: []jwk.Key{jwkKey}}
-	JwksURL = startJwksServer(jwks)
+	tc.JwksURL = startJwksServer(jwks)
+	return tc
 }
 
 func options(kid string) jws.Option {
@@ -64,32 +69,33 @@ func startJwksServer(jwks *jwk.Set) string {
 	HandleByPanic(err)
 	path := "/.well-known/jwks.json"
 	go func() {
-		http.HandleFunc(path, func(rw http.ResponseWriter, r *http.Request) {
+		mux := http.NewServeMux()
+		mux.HandleFunc(path, func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(http.StatusOK)
 			rw.Write(keys)
 		})
-		panic(http.Serve(listener, nil))
+		panic(http.Serve(listener, mux))
 	}()
 	return fmt.Sprintf("http://0.0.0.0:%d%s", listener.Addr().(*net.TCPAddr).Port, path)
 }
 
 // NewValidToken generates a signed valid token with the given claims
-func NewValidToken(claims map[string]interface{}) []byte {
-	return newSignedToken(claims, time.Now().Add(time.Hour*24), privateKey)
+func (tc *TestConfig) NewValidToken(claims map[string]interface{}) []byte {
+	return tc.newSignedToken(claims, time.Now().Add(time.Hour*24), tc.privateKey)
 }
 
 // NewExpiredToken generates a signed but expired token with the given claims
-func NewExpiredToken(claims map[string]interface{}) []byte {
-	return newSignedToken(claims, time.Now().Add(-time.Hour*24), privateKey)
+func (tc *TestConfig) NewExpiredToken(claims map[string]interface{}) []byte {
+	return tc.newSignedToken(claims, time.Now().Add(-time.Hour*24), tc.privateKey)
 }
 
 // NewInvalidToken generates a token signed with a key that does not exist in the JWKS
-func NewInvalidToken(claims map[string]interface{}) []byte {
+func (tc *TestConfig) NewInvalidToken(claims map[string]interface{}) []byte {
 	privKey, _ := generateKey()
-	return newSignedToken(claims, time.Now().Add(time.Hour*24), privKey)
+	return tc.newSignedToken(claims, time.Now().Add(time.Hour*24), privKey)
 }
 
-func newSignedToken(claims map[string]interface{}, exp time.Time, key *rsa.PrivateKey) []byte {
+func (tc *TestConfig) newSignedToken(claims map[string]interface{}, exp time.Time, key *rsa.PrivateKey) []byte {
 	t := jwt.New()
 	for k, v := range claims {
 		t.Set(k, v)
@@ -97,7 +103,7 @@ func newSignedToken(claims map[string]interface{}, exp time.Time, key *rsa.Priva
 	t.Set(jwt.ExpirationKey, exp)
 	buf, err := json.MarshalIndent(t, "", "  ")
 	HandleByPanic(err)
-	token, err := jws.Sign(buf, jwa.RS256, key, opts)
+	token, err := jws.Sign(buf, jwa.RS256, key, tc.opts)
 	HandleByPanic(err)
 	return token
 }
