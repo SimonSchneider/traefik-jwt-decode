@@ -39,6 +39,7 @@ var (
 	uncachedSrv, cachedSrv *decoder.Server
 	ctx                    context.Context
 	tokens                 = make([]string, nTokens, nTokens)
+	tc                     = newTest()
 )
 
 func TestNoAuthHeaderIsOKWithoutTokenHeaders(t *testing.T) {
@@ -145,19 +146,19 @@ func reqFor(token []byte) (*httptest.ResponseRecorder, *http.Request) {
 }
 
 func validRndToken() []byte {
-	return NewValidToken(newRndClaims())
+	return tc.NewValidToken(newRndClaims())
 }
 
 func invalidRndToken() []byte {
-	return NewInvalidToken(newRndClaims())
+	return tc.NewInvalidToken(newRndClaims())
 }
 
 func validToken(rndClaimVal string) []byte {
-	return NewValidToken(newClaims(rndClaimVal))
+	return tc.NewValidToken(newClaims(rndClaimVal))
 }
 
 func expiredRndToken() []byte {
-	return NewExpiredToken(newRndClaims())
+	return tc.NewExpiredToken(newRndClaims())
 }
 
 func newRndClaims() map[string]interface{} {
@@ -178,7 +179,7 @@ func init() {
 	ctx = log.Logger.WithContext(context.Background())
 	var err error
 	var dec, cachedDec decoder.TokenDecoder
-	dec, err = decoder.NewJwsDecoder(JwksURL, claimMappings)
+	dec, err = decoder.NewJwsDecoder(tc.JwksURL, claimMappings)
 	HandleByPanic(err)
 	cachedDec = decoder.NewCachedJwtDecoder(cache, dec)
 	HandleByPanic(err)
