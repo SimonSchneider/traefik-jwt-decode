@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/rs/zerolog/hlog"
+
 	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
 	"github.com/dgraph-io/ristretto"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -17,29 +20,34 @@ const (
 )
 
 func main() {
+	log := zerolog.New(os.Stdout).With().Timestamp().Caller().Logger()
 	conf, err := parseConfig()
 	if err != nil {
+		log.Panic().Err(err).Msg("unable to parse config")
 		panic(err)
 	}
 	dec, err := defaultDecoder(conf)
 	if err != nil {
+		log.Panic().Err(err).Msg("unable to create decoder")
 		panic(err)
 	}
-	srv, err := decoder.NewServer(dec, conf.authHeaderKey)
-	if err != nil {
-		panic(err)
-	}
+	srv := decoder.NewServer(dec, conf.authHeaderKey)
+	var handler http.HandlerFunc = srv.DecodeToken
+	loggingMiddleWare := hlog.NewHandler(log)
 	serve := fmt.Sprintf(":%s", conf.port)
 	done := make(chan struct{})
 	go func() {
-		http.HandleFunc("/", srv.DecodeToken)
-		http.ListenAndServe(serve, nil)
+		mux := http.NewServeMux()
+		mux.Handle("/", loggingMiddleWare(handler))
+		http.ListenAndServe(serve, mux)
 		done <- struct{}{}
 	}()
-	fmt.Println("server running on", serve)
+	log.Info().Msgf("server running on %s", serve)
+	claimMsg := zerolog.Dict()
 	for k, v := range conf.claimMapping {
-		fmt.Printf("mapping claim %s to header %s\n", k, v)
+		claimMsg.Str(k, v)
 	}
+	log.Info().Dict("mappings", claimMsg).Msg("mappings from claim keys to header")
 	<-done
 }
 

@@ -1,9 +1,11 @@
 package decoder_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -29,7 +31,8 @@ func TestTokenWithInvalidClaims(t *testing.T) {
 	dec, _ := decoder.NewJwsDecoder(JwksURL, claimMapping)
 	for k, v := range invalidTokens {
 		token := NewValidToken(map[string]interface{}{"email": v})
-		resp, err := dec.Decode(string(token))
+		ctx := log.Logger.WithContext(context.Background())
+		resp, err := dec.Decode(ctx, string(token))
 		Report(t, err == nil, "able to decode token with unexpected type: (%s : %+v) into %+v", k, v, resp)
 	}
 }

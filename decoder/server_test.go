@@ -1,12 +1,17 @@
 package decoder_test
 
 import (
+	"context"
 	"fmt"
 	rnd "math/rand"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
 )
@@ -32,11 +37,12 @@ var (
 		randomClaim: randomClaimHeader,
 	}
 	uncachedSrv, cachedSrv *decoder.Server
+	ctx                    context.Context
 	tokens                 = make([]string, nTokens, nTokens)
 )
 
 func TestNoAuthHeaderIsOKWithoutTokenHeaders(t *testing.T) {
-	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/", nil)
 	rr := httptest.NewRecorder()
 	serverTest(func(srv *decoder.Server) func(*testing.T) {
 		return func(t *testing.T) {
@@ -97,6 +103,7 @@ func serverTest(subTest func(s *decoder.Server) func(t *testing.T)) func(t *test
 }
 
 func BenchmarkFull(b *testing.B) {
+	log.Logger = zerolog.New(os.Stdout).Level(zerolog.WarnLevel).With().Timestamp().Caller().Logger()
 	for i := 0; i < nTokens; i++ {
 		tokens[i] = fmt.Sprintf("Bearer %s", validRndToken())
 	}
@@ -109,7 +116,7 @@ func BenchmarkFull(b *testing.B) {
 func benchmarkServerSerial(srv *decoder.Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			req, _ := http.NewRequest("GET", "/", nil)
+			req, _ := http.NewRequestWithContext(ctx, "GET", "/", nil)
 			req.Header.Add(authHeaderKey, tokens[i%nTokens])
 			rr := httptest.NewRecorder()
 			srv.DecodeToken(rr, req)
@@ -121,7 +128,7 @@ func benchmarkServerParallel(srv *decoder.Server) func(b *testing.B) {
 	return func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				req, _ := http.NewRequest("GET", "/", nil)
+				req, _ := http.NewRequestWithContext(ctx, "GET", "/", nil)
 				req.Header.Add(authHeaderKey, tokens[rnd.Intn(nTokens)])
 				rr := httptest.NewRecorder()
 				srv.DecodeToken(rr, req)
@@ -131,7 +138,7 @@ func benchmarkServerParallel(srv *decoder.Server) func(b *testing.B) {
 }
 
 func reqFor(token []byte) (*httptest.ResponseRecorder, *http.Request) {
-	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "/", nil)
 	req.Header.Add(authHeaderKey, fmt.Sprintf("Bearer %s", token))
 	rr := httptest.NewRecorder()
 	return rr, req
@@ -167,14 +174,14 @@ func newClaims(rndClaimVal string) map[string]interface{} {
 }
 
 func init() {
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger()
+	ctx = log.Logger.WithContext(context.Background())
 	var err error
 	var dec, cachedDec decoder.TokenDecoder
 	dec, err = decoder.NewJwsDecoder(JwksURL, claimMappings)
 	HandleByPanic(err)
 	cachedDec = decoder.NewCachedJwtDecoder(cache, dec)
 	HandleByPanic(err)
-	uncachedSrv, err = decoder.NewServer(dec, authHeaderKey)
-	HandleByPanic(err)
-	cachedSrv, err = decoder.NewServer(cachedDec, authHeaderKey)
-	HandleByPanic(err)
+	uncachedSrv = decoder.NewServer(dec, authHeaderKey)
+	cachedSrv = decoder.NewServer(cachedDec, authHeaderKey)
 }

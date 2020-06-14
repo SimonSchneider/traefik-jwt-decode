@@ -1,7 +1,10 @@
 package decoder
 
 import (
+	"context"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/dgraph-io/ristretto"
 )
@@ -21,12 +24,13 @@ func NewCachedJwtDecoder(cache *ristretto.Cache, delegate TokenDecoder) TokenDec
 	return &cachedJwtDecoder{cache: cache, delegate: delegate}
 }
 
-func (d *cachedJwtDecoder) Decode(raw string) (*Token, error) {
+func (d *cachedJwtDecoder) Decode(ctx context.Context, raw string) (*Token, error) {
 	if t, ok := d.cache.Get(raw); ok {
 		fromCache := t.(*cacheVal)
 		return fromCache.token, fromCache.err
 	}
-	token, err := d.delegate.Decode(raw)
+	log.Ctx(ctx).Trace().Msg("cache miss, resolving token from delegate")
+	token, err := d.delegate.Decode(ctx, raw)
 	toCache := &cacheVal{token: token, err: err}
 	d.cache.SetWithTTL(raw, toCache, 100, 10*time.Minute)
 	return token, err
