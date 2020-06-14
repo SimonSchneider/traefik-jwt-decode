@@ -20,20 +20,53 @@ end destination.
 
 ### Configuring and running the docker image:
 
-minimal:
-
+minimal (with claimMapping env variable)
 ```
-echo "{ \"claim-123\": \"header-123\" " > config.json
-
-docker run -v $(pwd)/config.json:/config/config.json -e JWKS_URL="http://some.com/.well-known/jwks.json" -p 8080:8080 simonschneider/traefik-jwt-decode:latest
+docker run \
+  -e CLAIM_MAPPINGS="claim-123:header-123,claim-456:header-456" \
+  -e JWKS_URL="https://www.googleapis.com/oauth2/v3/certs" \
+  -p 8080:8080 \
+  simonschneider/traefik-jwt-decode:latest
 ```
 
-available configuration:
+minimal (with claim file):
+```
+echo "{ \"claim-123\": \"header-123\" }" > config.json
 
-| Type | Configuration               | Description                                                                        | Example                                                      | Default         |
-| ---- | --------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------- |
-| env  | `PORT`                      | port to run the server on                                                          | `8080`                                                       | `8080`          |
-| env  | `JWKS_URL`                  | url pointing at the jwks json file (https://auth0.com/docs/tokens/concepts/jwks)   | http://some.com/.well-known/jwks.json                        | Required        |
-| file | `/$CLAIM_MAPPING_FILE_PATH` | json file located at `$CLAIM_MAPPING_FILE_PATH` containing claim to header mapping | `{"claimKey-1": "headerKey-1", "claimKey-2": "headerKey-2"}` | Required        |
-| env  | `CLAIM_MAPPING_FILE_PATH`   | path to the claim mapping json file                                                | `config.json`                                                | `config.json`   |
-| env  | `AUTH_HEADER_KEY`           | Authorization Header Key Containing the token                                      | `Authorization`                                              | `Authorization` |
+docker run \
+  -v $(pwd)/config.json:/config.json \
+  -e JWKS_URL="https://www.googleapis.com/oauth2/v3/certs" \
+  -p 8080:8080 \
+  simonschneider/traefik-jwt-decode:latest
+```
+
+### Configuration reference
+
+required configurations:
+```
+JWKS_URL
+url pointing at the jwks json file (https://auth0.com/docs/tokens/concepts/jwks)
+```
+
+default configurations
+```
+CLAIM_MAPPING_FILE_PATH = config.json
+AUTH_HEADER_KEY         = Authorization
+PORT                    = 8080
+LOG_LEVEL               = info           = trace | debug | info | warn | crit
+LOG_TYPE                = json           = json | pretty
+MAX_CACHE_KEYS          = 10000
+```
+
+optional configurations
+```
+CLAIM_MAPPINGS
+set up claim mappings by env, on the format
+{claim1}:{header1},{claim2}:{header2}
+corresponds to the json
+
+{
+  "claim1": "header1",
+  "claim2": "header2"
+}
+```
