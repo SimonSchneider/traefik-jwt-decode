@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -64,7 +65,7 @@ func NewConfig() *Config {
 }
 
 // RunServer starts a server from the config
-func (c *Config) RunServer() (chan error, *http.Server) {
+func (c *Config) RunServer() (chan error, net.Listener) {
 	logger := c.getLogger()
 	log.Logger = logger
 	server := c.getServer()
@@ -72,16 +73,20 @@ func (c *Config) RunServer() (chan error, *http.Server) {
 	loggingMiddleWare := hlog.NewHandler(logger)
 	serve := fmt.Sprintf(":%s", c.port.get())
 	done := make(chan error)
-	srv := &http.Server{Addr: serve}
+	listener, err := net.Listen("tcp", serve)
+	if err != nil {
+		panic(err)
+	}
 	go func() {
+		srv := &http.Server{}
 		mux := http.NewServeMux()
 		mux.Handle("/", loggingMiddleWare(handler))
 		srv.Handler = mux
-		done <- srv.ListenAndServe()
+		done <- srv.Serve(listener)
 		close(done)
 	}()
 	log.Info().Msgf("server running on %s", serve)
-	return done, srv
+	return done, listener
 }
 
 func (c *Config) getServer() *decoder.Server {
