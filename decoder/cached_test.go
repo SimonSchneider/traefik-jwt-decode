@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
+	dt "github.com/SimonSchneider/traefik-jwt-decode/decodertest"
 )
 
 func TestCacheAllResponses(t *testing.T) {
@@ -23,7 +24,7 @@ func TestCacheAllResponses(t *testing.T) {
 			delegate := newMock(func(ctx context.Context, raw string) (*decoder.Token, error) {
 				return tc.token, tc.err
 			})
-			dec := decoder.NewCachedJwtDecoder(cache, delegate)
+			dec := decoder.NewCachedJwtDecoder(dt.Cache, delegate)
 			getAndCompareCached(t, name, dec, delegate, tc.token, tc.err, 1)
 			time.Sleep(100 * time.Millisecond)
 			getAndCompareCached(t, name, dec, delegate, tc.token, tc.err, 1)
@@ -32,10 +33,10 @@ func TestCacheAllResponses(t *testing.T) {
 }
 
 func getAndCompareCached(t *testing.T, name string, dec decoder.TokenDecoder, delegate *decoderMock, expectedToken *decoder.Token, expectedError error, expectedCalls int) {
-	token, err := dec.Decode(context.Background(), name)
-	Report(t, err != expectedError, "got unexpected error %v from cache expected %v", err, expectedError)
-	Report(t, token != expectedToken, "got unexpected token %v from cache expected %v", token, expectedToken)
-	Report(t, delegate.calls != expectedCalls, "incorrect number of calls to delegate %d expected %d", delegate.calls, expectedCalls)
+	token, err := dec.Decode(dt.Ctx(), name)
+	dt.Report(t, err != expectedError, "got unexpected error %v from cache expected %v", err, expectedError)
+	dt.Report(t, token != expectedToken, "got unexpected token %v from cache expected %v", token, expectedToken)
+	dt.Report(t, delegate.calls != expectedCalls, "incorrect number of calls to delegate %d expected %d", delegate.calls, expectedCalls)
 }
 
 type DecodeFunc func(ctx context.Context, raw string) (*decoder.Token, error)

@@ -14,6 +14,8 @@ type jwsDecoder struct {
 	claimMapping map[string]string
 }
 
+// UnexpectedClaimTypeError is thrown if a mapped claim in the token has an unexpected type
+// the token should always have type string
 type UnexpectedClaimTypeError struct {
 	name  string
 	claim interface{}
