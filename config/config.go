@@ -35,6 +35,21 @@ const (
 	ClaimMappingsEnv        = "CLAIM_MAPPINGS"
 )
 
+// NewConfig creates a new Config from the current env
+func NewConfig() *Config {
+	var c Config
+	c.jwksURL = required(JwksURLEnv)
+	c.claimMappingFilePath = withDefault(ClaimMappingFileEnv, ClaimMappingFileDefault)
+	c.authHeader = withDefault(AuthHeaderEnv, AuthHeaderDefault)
+	c.port = withDefault(PortEnv, PortDefault)
+	c.logLevel = withDefault(LogLevelEnv, LogLevelDefault)
+	c.logType = withDefault(LogTypeEnv, LogTypeDefault)
+	c.maxCacheKeys = withDefault(MaxCacheKeysEnv, MaxCacheKeysDefault)
+	c.claimMappings = optional(ClaimMappingsEnv)
+	c.keyCost = 100
+	return &c
+}
+
 // Config to bootstrap decoder server
 type Config struct {
 	jwksURL              envVar
@@ -43,24 +58,9 @@ type Config struct {
 	port                 envVar
 	logLevel             envVar
 	logType              envVar
-	claimMappings        envVar
 	maxCacheKeys         envVar
+	claimMappings        envVar
 	keyCost              int64
-}
-
-// NewConfig creates a new Config from the current env
-func NewConfig() *Config {
-	var c Config
-	c.jwksURL = envVar{JwksURLEnv, "", true}
-	c.claimMappingFilePath = envVar{ClaimMappingFileEnv, ClaimMappingFileDefault, true}
-	c.authHeader = envVar{AuthHeaderEnv, AuthHeaderDefault, true}
-	c.port = envVar{PortEnv, PortDefault, true}
-	c.logLevel = envVar{LogLevelEnv, LogLevelDefault, true}
-	c.logType = envVar{LogTypeEnv, LogTypeDefault, true}
-	c.claimMappings = envVar{ClaimMappingsEnv, "", false}
-	c.maxCacheKeys = envVar{MaxCacheKeysEnv, MaxCacheKeysDefault, true}
-	c.keyCost = 100
-	return &c
 }
 
 // RunServer starts a server from the config
@@ -177,6 +177,18 @@ func (c claimMappingsT) fromString(val string) error {
 type envVar struct {
 	name, defaultValue string
 	required           bool
+}
+
+func withDefault(name, defaultValue string) envVar {
+	return envVar{name: name, defaultValue: defaultValue, required: true}
+}
+
+func required(name string) envVar {
+	return envVar{name: name, defaultValue: "", required: true}
+}
+
+func optional(name string) envVar {
+	return envVar{name: name, defaultValue: "", required: false}
 }
 
 func (e envVar) get() string {
