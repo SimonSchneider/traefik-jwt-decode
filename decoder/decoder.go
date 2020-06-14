@@ -17,6 +17,7 @@ type Token struct {
 	Expiration time.Time
 }
 
+// TokenExpiredError means the token is invalid because it has expired
 type TokenExpiredError struct {
 	expiredAt time.Time
 }

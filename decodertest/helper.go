@@ -1,14 +1,22 @@
-package decoder_test
+package decodertest
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
+
+	"github.com/rs/zerolog"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/lestrrat-go/jwx/jwa"
@@ -17,8 +25,14 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
+const (
+	// AuthHeaderKey for the test
+	AuthHeaderKey = "Authorization"
+)
+
 var (
-	cache, _ = ristretto.NewCache(&ristretto.Config{
+	// Cache to be reused between all tests
+	Cache, _ = ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,     // number of keys to track frequency of (10M).
 		MaxCost:     1 << 30, // maximum cost of cache (1GB).
 		BufferItems: 64,      // number of keys per Get buffer.
@@ -26,6 +40,7 @@ var (
 	})
 )
 
+// TestConfig holds most config used for tests also starts a JWKS server
 type TestConfig struct {
 	// JwksURL is where the JWKS is hosted
 	JwksURL    string
@@ -33,7 +48,8 @@ type TestConfig struct {
 	opts       jws.Option
 }
 
-func newTest() *TestConfig {
+// NewTest creates a new test config
+func NewTest() *TestConfig {
 	var jwkKey jwk.Key
 	tc := &TestConfig{}
 	tc.privateKey, jwkKey = generateKey()
@@ -108,6 +124,27 @@ func (tc *TestConfig) newSignedToken(claims map[string]interface{}, exp time.Tim
 	return token
 }
 
+func (tc *TestConfig) newJwsDecoder(claimMappings map[string]string) decoder.TokenDecoder {
+	d, err := decoder.NewJwsDecoder(tc.JwksURL, claimMappings)
+	HandleByPanic(err)
+	return d
+}
+
+func (tc *TestConfig) newCachedDecoder(claimMappings map[string]string) decoder.TokenDecoder {
+	d := tc.newJwsDecoder(claimMappings)
+	return decoder.NewCachedJwtDecoder(Cache, d)
+}
+
+// UncachedServer creates an uncached server
+func (tc *TestConfig) UncachedServer(claimMappings map[string]string) *decoder.Server {
+	return decoder.NewServer(tc.newJwsDecoder(claimMappings), AuthHeaderKey)
+}
+
+// CachedServer creates a cached server
+func (tc *TestConfig) CachedServer(claimMappings map[string]string) *decoder.Server {
+	return decoder.NewServer(tc.newCachedDecoder(claimMappings), AuthHeaderKey)
+}
+
 // Report the error message to testing if the condition is met
 func Report(t *testing.T, condition bool, message string, args ...interface{}) {
 	if condition {
@@ -120,4 +157,13 @@ func HandleByPanic(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Ctx creates a new test config with a logger
+func Ctx() context.Context {
+	return log.Logger.WithContext(context.Background())
+}
+
+func init() {
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger().Level(zerolog.TraceLevel)
 }
