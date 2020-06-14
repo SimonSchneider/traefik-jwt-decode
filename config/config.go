@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -23,6 +24,7 @@ const (
 	PortEnv, PortDefault                         = "PORT", "8080"
 	LogLevelEnv, LogLevelDefault                 = "LOG_LEVEL", "info"
 	LogTypeEnv, LogTypeDefault                   = "LOG_TYPE", "json"
+	MaxCacheKeysEnv, MaxCacheKeysDefault         = "MAX_CACHE_KEYS", "10000"
 	ClaimMappingsEnv                             = "CLAIM_MAPPINGS"
 )
 
@@ -34,6 +36,8 @@ type Config struct {
 	LogLevel             envVar
 	LogType              envVar
 	ClaimMappings        envVar
+	MaxCacheKeys         envVar
+	keyCost              int64
 }
 
 func NewConfig() *Config {
@@ -45,6 +49,8 @@ func NewConfig() *Config {
 	c.LogLevel = envVar{LogLevelEnv, LogLevelDefault, true}
 	c.LogType = envVar{LogTypeEnv, LogTypeDefault, true}
 	c.ClaimMappings = envVar{ClaimMappingsEnv, "", false}
+	c.MaxCacheKeys = envVar{MaxCacheKeysEnv, MaxCacheKeysDefault, true}
+	c.keyCost = 100
 	return &c
 }
 
@@ -102,10 +108,14 @@ func (c *Config) getLogger() (logger zerolog.Logger) {
 }
 
 func (c *Config) getCache() *ristretto.Cache {
+	keys := c.MaxCacheKeys.getInt64()
+	if keys < 1 {
+		panic(fmt.Errorf("Max keys need to be a positive number, was %d", keys))
+	}
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1e7,     // number of keys to track frequency of (10M).
-		MaxCost:     1 << 30, // maximum cost of cache (1GB).
-		BufferItems: 64,      // number of keys per Get buffer.
+		NumCounters: 1e7,              // number of keys to track frequency of (10M).
+		MaxCost:     keys * c.keyCost, // maximum cost of cache (1GB).
+		BufferItems: 64,               // number of keys per Get buffer.
 		Metrics:     true,
 	})
 	if err != nil {
@@ -167,4 +177,13 @@ func (e envVar) get() string {
 		panic(fmt.Errorf("required key %s not found in env", e.name))
 	}
 	return e.defaultValue
+}
+
+func (e envVar) getInt64() (val int64) {
+	str := e.get()
+	val, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		panic(fmt.Errorf("cache size has to be an integer: %w", err))
+	}
+	return
 }
