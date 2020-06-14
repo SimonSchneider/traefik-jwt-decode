@@ -29,7 +29,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
-		log.Debug().Int(statusKey, http.StatusOK).Msg("no auth header, early exit")
+		log.Debug().Int(statusKey, http.StatusOK).Msgf("no auth header %s, early exit", s.authHeaderKey)
 		rw.WriteHeader(http.StatusOK)
 		return
 	}

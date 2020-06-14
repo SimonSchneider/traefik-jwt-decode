@@ -23,14 +23,17 @@ docker: build
 	docker build $(BUILD_DIR) -t $(DOCKER_NAME):$(TAG)
 build: deps
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux GO111MODULE=on $(GOBUILD) -o $(BINARY_NAME) -v $(MAIN_FILE)
-verify: test bench
+verify: race bench
 bench: outdir
 	$(GOTEST) ./$(BENCH_DIR) -bench=. -benchtime $(BENCH_TIME) -benchmem -memprofile $(BENCH_MEM_FILE) -cpuprofile $(BENCH_CPU_FILE)
 cover: test
 	go tool cover -html $(COVER_FILE)
+race: deps lint outdir
+	$(GOTEST) -coverprofile $(COVERFILE) -race ./... -v
 test: deps lint outdir
-	$(GOTEST) -coverprofile $(COVER_FILE) -race ./... -v
+	$(GOTEST) -coverprofile $(COVER_FILE) ./... -v
 lint:
+	go mod tidy
 	go fmt ./...
 	go vet ./...
 	golint ./...
