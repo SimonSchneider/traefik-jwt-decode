@@ -118,7 +118,7 @@ func TestFailsOnBadJwksURL(t *testing.T) {
 	os.Clearenv()
 	tc := dt.NewTest()
 	defaultEnv(tc)
-	os.Setenv(c.JwksUrlEnv, "http://non-existing/.jwks.url")
+	os.Setenv(c.JwksURLEnv, "http://non-existing/.jwks.url")
 	validatePanicsWhenStarting(t)
 }
 
@@ -143,7 +143,7 @@ func validatePanicsWhenStarting(t *testing.T) {
 
 func defaultEnv(tc *dt.TestConfig) {
 	os.Setenv(c.LogTypeEnv, "pretty")
-	os.Setenv(c.JwksUrlEnv, tc.JwksURL)
+	os.Setenv(c.JwksURLEnv, tc.JwksURL)
 	os.Setenv(c.LogLevelEnv, "trace")
 	os.Setenv(c.ClaimMappingsEnv, claimMappingString)
 }
