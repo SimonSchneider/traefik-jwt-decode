@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	c "github.com/SimonSchneider/traefik-jwt-decode/config"
@@ -78,21 +79,42 @@ func TestMergeClaimMappingsFileAndEnv(t *testing.T) {
 }
 
 func validateCorrectSetup(t *testing.T, tc *dt.TestConfig, authKey string) {
-	client := &http.Client{}
 	conf := c.NewConfig()
 	doneChan, l := conf.RunServer()
 	port := l.Addr().(*net.TCPAddr).Port
 	token := tc.NewValidToken(claims)
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d", port), nil)
 	req.Header.Set(authKey, fmt.Sprintf("Bearer %s", token))
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	dt.HandleByPanic(err)
 	dt.Report(t, resp.Header.Get("claimHeader1") != claims["claim1"], "incorrect header for claim1")
 	dt.Report(t, resp.Header.Get("claimHeader2") != claims["claim2"], "incorrect header for claim2")
 	dt.Report(t, resp.Header.Get("claimHeader3") != "", "incorrect header for claim2")
+	validateMetrics(t, port)
 	err = l.Close()
 	dt.HandleByPanic(err)
 	<-doneChan
+}
+
+func validateMetrics(t *testing.T, port int) {
+	metricsReq, _ := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/metrics", port), nil)
+	resp, err := http.DefaultClient.Do(metricsReq)
+	dt.HandleByPanic(err)
+	dt.Report(t, resp.StatusCode != http.StatusOK, "metrics endpoint not accessible %d", resp.StatusCode)
+	defer resp.Body.Close()
+	bBody, _ := ioutil.ReadAll(resp.Body)
+	body := strings.Split(string(bBody), "\n")
+	metrics := []string{"traefik_jwt_decode_http_server_requests"}
+	for _, metric := range metrics {
+		found := false
+		for _, bodyLine := range body {
+			if strings.Contains(bodyLine, metric) {
+				found = true
+				break
+			}
+		}
+		dt.Report(t, !found, "metrics not found %s found %s", metric, body)
+	}
 }
 
 func TestFailsIfNoJwksUrlIsSet(t *testing.T) {

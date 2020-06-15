@@ -9,6 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	prom "github.com/prometheus/client_golang/prometheus"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/rs/zerolog/hlog"
@@ -68,8 +72,10 @@ type Config struct {
 func (c *Config) RunServer() (chan error, net.Listener) {
 	logger := c.getLogger()
 	log.Logger = logger
-	server := c.getServer()
+	registry := prom.NewRegistry()
+	server := c.getServer(registry)
 	var handler http.HandlerFunc = server.DecodeToken
+	histogramMw := histogramMiddleware(registry)
 	loggingMiddleWare := hlog.NewHandler(logger)
 	serve := fmt.Sprintf(":%s", c.port.get())
 	done := make(chan error)
@@ -80,7 +86,8 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 	go func() {
 		srv := &http.Server{}
 		mux := http.NewServeMux()
-		mux.Handle("/", loggingMiddleWare(handler))
+		mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+		mux.Handle("/", histogramMw(loggingMiddleWare(handler)))
 		srv.Handler = mux
 		done <- srv.Serve(listener)
 		close(done)
@@ -89,7 +96,7 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 	return done, listener
 }
 
-func (c *Config) getServer() *decoder.Server {
+func (c *Config) getServer(r *prom.Registry) *decoder.Server {
 	jwksURL := c.jwksURL.get()
 	claimMappings := c.getClaimMappings()
 	jwsDec, err := decoder.NewJwsDecoder(jwksURL, claimMappings)
@@ -101,7 +108,7 @@ func (c *Config) getServer() *decoder.Server {
 		claimMsg.Str(k, v)
 	}
 	log.Info().Dict("mappings", claimMsg).Msg("mappings from claim keys to header")
-	cachedDec := decoder.NewCachedJwtDecoder(c.getCache(), jwsDec)
+	cachedDec := decoder.NewCachedJwtDecoder(c.getCache(r), jwsDec)
 	return decoder.NewServer(cachedDec, c.authHeader.get())
 }
 
@@ -122,7 +129,7 @@ func (c *Config) getLogger() (logger zerolog.Logger) {
 	return logger.Level(level)
 }
 
-func (c *Config) getCache() *ristretto.Cache {
+func (c *Config) getCache(r *prom.Registry) *ristretto.Cache {
 	keys := c.maxCacheKeys.getInt64()
 	if keys < 1 {
 		panic(fmt.Errorf("Max keys need to be a positive number, was %d", keys))
@@ -136,6 +143,7 @@ func (c *Config) getCache() *ristretto.Cache {
 	if err != nil {
 		panic(err)
 	}
+	c.registerCacheMetrics(r, cache)
 	return cache
 }
 
@@ -177,6 +185,49 @@ func (c claimMappingsT) fromString(val string) error {
 		c[pair[0]] = pair[1]
 	}
 	return nil
+}
+
+func histogramMiddleware(r *prom.Registry) func(handler http.Handler) http.Handler {
+	hist := prom.NewHistogramVec(histOpts("requests"), []string{})
+	r.MustRegister(hist)
+	return func(next http.Handler) http.Handler {
+		return promhttp.InstrumentHandlerDuration(hist, next)
+	}
+}
+
+func (c *Config) registerCacheMetrics(r *prom.Registry, cache *ristretto.Cache) {
+	m := cache.Metrics
+	hr := prom.NewGaugeFunc(cacheOpts("hit_ratio"), m.Ratio)
+	r.MustRegister(hr)
+	hit := prom.NewGaugeFunc(cacheOpts("requests", "outcome", "hit"), func() float64 {
+		return float64(m.Hits())
+	})
+	r.MustRegister(hit)
+	miss := prom.NewGaugeFunc(cacheOpts("requests", "outcome", "miss"), func() float64 {
+		return float64(m.Misses())
+	})
+	r.MustRegister(miss)
+}
+
+func cacheOpts(name string, labels ...string) prom.GaugeOpts {
+	return prom.GaugeOpts{Namespace: "traefik_jwt_decode", Subsystem: "cache", Name: name,
+		ConstLabels: promLabels(labels)}
+}
+
+func histOpts(name string, labels ...string) prom.HistogramOpts {
+	return prom.HistogramOpts{Namespace: "traefik_jwt_decode", Subsystem: "http_server", Name: name,
+		ConstLabels: promLabels(labels), Buckets: []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1}}
+}
+
+func promLabels(labels []string) prom.Labels {
+	labelMap := make(map[string]string)
+	if len(labels)%2 != 0 {
+		panic("labels need to be defined in pairs")
+	}
+	for i := 0; i < len(labels); i += 2 {
+		labelMap[labels[i]] = labels[i+1]
+	}
+	return labelMap
 }
 
 type envVar struct {
