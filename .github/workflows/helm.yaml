@@ -1,0 +1,15 @@
+name: Test deploy helm chart
+
+on:
+  push:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: azure/setup-helm@v1
+      - uses: engineerd/setup-kind@v0.4.0
+      - name: Install helm chart
+        working-directory: _helm
+        run: helm install --atomic --debug test traefik-jwt-decode -f testValues.yaml
