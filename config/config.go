@@ -37,6 +37,8 @@ const (
 	LogTypeDefault          = "json"
 	MaxCacheKeysEnv         = "MAX_CACHE_KEYS"
 	MaxCacheKeysDefault     = "10000"
+	CacheEnabledEnv         = "CACHE_ENABLED"
+	CacheEnabledDefault     = "true"
 	ClaimMappingsEnv        = "CLAIM_MAPPINGS"
 )
 
@@ -50,6 +52,7 @@ func NewConfig() *Config {
 	c.logLevel = withDefault(LogLevelEnv, LogLevelDefault)
 	c.logType = withDefault(LogTypeEnv, LogTypeDefault)
 	c.maxCacheKeys = withDefault(MaxCacheKeysEnv, MaxCacheKeysDefault)
+	c.cacheEnabled = withDefault(CacheEnabledEnv, CacheEnabledDefault)
 	c.claimMappings = optional(ClaimMappingsEnv)
 	c.keyCost = 100
 	return &c
@@ -64,6 +67,7 @@ type Config struct {
 	logLevel             envVar
 	logType              envVar
 	maxCacheKeys         envVar
+	cacheEnabled         envVar
 	claimMappings        envVar
 	keyCost              int64
 }
@@ -108,8 +112,13 @@ func (c *Config) getServer(r *prom.Registry) *decoder.Server {
 		claimMsg.Str(k, v)
 	}
 	log.Info().Dict("mappings", claimMsg).Msg("mappings from claim keys to header")
-	cachedDec := decoder.NewCachedJwtDecoder(c.getCache(r), jwsDec)
-	return decoder.NewServer(cachedDec, c.authHeader.get())
+	var dec decoder.TokenDecoder
+	if c.cacheEnabled.getBool() {
+		dec = decoder.NewCachedJwtDecoder(c.getCache(r), jwsDec)
+	} else {
+		dec = jwsDec
+	}
+	return decoder.NewServer(dec, c.authHeader.get())
 }
 
 func (c *Config) getLogger() (logger zerolog.Logger) {
@@ -264,4 +273,16 @@ func (e envVar) getInt64() (val int64) {
 		panic(fmt.Errorf("cache size has to be an integer: %w", err))
 	}
 	return
+}
+
+func (e envVar) getBool() (val bool) {
+	str := e.get()
+	switch str {
+	case "true":
+		return true
+	case "false":
+		return false
+	default:
+		panic(fmt.Errorf("unknown bool value %s", str))
+	}
 }
