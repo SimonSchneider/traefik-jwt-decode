@@ -47,6 +47,8 @@ func TestNoAuthHeaderIsOKWithoutTokenHeaders(t *testing.T) {
 			srv.DecodeToken(rr, req)
 			status := rr.Result().StatusCode
 			dt.Report(t, status != http.StatusOK, "no token should be ok got %d", status)
+			validated := rr.Result().Header.Get(dt.TokenValidatedHeaderKey)
+			dt.Report(t, validated != "false", "no token should set '%s: false'", dt.TokenValidatedHeaderKey)
 		}
 	})(t)
 }
@@ -54,12 +56,13 @@ func TestNoAuthHeaderIsOKWithoutTokenHeaders(t *testing.T) {
 func TestServerResponseCode(t *testing.T) {
 	tc := dt.NewTest()
 	tests := map[string]struct {
-		token []byte
-		code  int
+		token          []byte
+		code           int
+		tokenValidated string
 	}{
-		"Valid token":   {token: validRndToken(tc), code: http.StatusOK},
-		"Expired token": {token: expiredRndToken(tc), code: http.StatusUnauthorized},
-		"Invalid token": {token: invalidRndToken(tc), code: http.StatusUnauthorized},
+		"Valid token":   {token: validRndToken(tc), code: http.StatusOK, tokenValidated: "true"},
+		"Expired token": {token: expiredRndToken(tc), code: http.StatusUnauthorized, tokenValidated: ""},
+		"Invalid token": {token: invalidRndToken(tc), code: http.StatusUnauthorized, tokenValidated: ""},
 	}
 	for name, test := range tests {
 		t.Run(name, serverTest(tc, func(srv *decoder.Server) func(*testing.T) {
@@ -68,6 +71,8 @@ func TestServerResponseCode(t *testing.T) {
 				srv.DecodeToken(rr, req)
 				status := rr.Result().StatusCode
 				dt.Report(t, status != test.code, "incorrect server response, %d, expected: %d", status, test.code)
+				validated := rr.Result().Header.Get(dt.TokenValidatedHeaderKey)
+				dt.Report(t, validated != test.tokenValidated, "header '%s' is '%s', expected: %s", dt.TokenValidatedHeaderKey, validated, test.tokenValidated)
 			}
 		}))
 	}
