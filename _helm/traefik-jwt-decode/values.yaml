@@ -18,6 +18,7 @@ env:
   PORT: "8080"
   CLAIM_MAPPING_FILE_PATH: "/claim-mappings/config.json"
   AUTH_HEADER_KEY: "Authorization"
+  TOKEN_VALIDATED_HEADER_KEY: "jwt-token-validated"
   LOG_LEVEL: "info"
   LOG_TYPE: "json"
   MAX_CACHE_KEYS: "10000"

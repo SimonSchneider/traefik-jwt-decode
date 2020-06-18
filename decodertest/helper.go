@@ -28,6 +28,8 @@ import (
 const (
 	// AuthHeaderKey for the test
 	AuthHeaderKey = "Authorization"
+	// TokenValidatedHeaderKey for the test
+	TokenValidatedHeaderKey = "jwt-token-validated"
 )
 
 var (
@@ -137,12 +139,12 @@ func (tc *TestConfig) newCachedDecoder(claimMappings map[string]string) decoder.
 
 // UncachedServer creates an uncached server
 func (tc *TestConfig) UncachedServer(claimMappings map[string]string) *decoder.Server {
-	return decoder.NewServer(tc.newJwsDecoder(claimMappings), AuthHeaderKey)
+	return decoder.NewServer(tc.newJwsDecoder(claimMappings), AuthHeaderKey, TokenValidatedHeaderKey)
 }
 
 // CachedServer creates a cached server
 func (tc *TestConfig) CachedServer(claimMappings map[string]string) *decoder.Server {
-	return decoder.NewServer(tc.newCachedDecoder(claimMappings), AuthHeaderKey)
+	return decoder.NewServer(tc.newCachedDecoder(claimMappings), AuthHeaderKey, TokenValidatedHeaderKey)
 }
 
 // Report the error message to testing if the condition is met

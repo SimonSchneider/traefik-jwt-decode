@@ -24,22 +24,24 @@ import (
 
 // Env variable constants
 const (
-	JwksURLEnv              = "JWKS_URL"
-	ClaimMappingFileEnv     = "CLAIM_MAPPING_FILE_PATH"
-	ClaimMappingFileDefault = "config.json"
-	AuthHeaderEnv           = "AUTH_HEADER_KEY"
-	AuthHeaderDefault       = "Authorization"
-	PortEnv                 = "PORT"
-	PortDefault             = "8080"
-	LogLevelEnv             = "LOG_LEVEL"
-	LogLevelDefault         = "info"
-	LogTypeEnv              = "LOG_TYPE"
-	LogTypeDefault          = "json"
-	MaxCacheKeysEnv         = "MAX_CACHE_KEYS"
-	MaxCacheKeysDefault     = "10000"
-	CacheEnabledEnv         = "CACHE_ENABLED"
-	CacheEnabledDefault     = "true"
-	ClaimMappingsEnv        = "CLAIM_MAPPINGS"
+	JwksURLEnv                  = "JWKS_URL"
+	ClaimMappingFileEnv         = "CLAIM_MAPPING_FILE_PATH"
+	ClaimMappingFileDefault     = "config.json"
+	AuthHeaderEnv               = "AUTH_HEADER_KEY"
+	AuthHeaderDefault           = "Authorization"
+	TokenValidatedHeaderEnv     = "TOKEN_VALIDATED_HEADER_KEY"
+	TokenValidatedHeaderDefault = "jwt-token-validated"
+	PortEnv                     = "PORT"
+	PortDefault                 = "8080"
+	LogLevelEnv                 = "LOG_LEVEL"
+	LogLevelDefault             = "info"
+	LogTypeEnv                  = "LOG_TYPE"
+	LogTypeDefault              = "json"
+	MaxCacheKeysEnv             = "MAX_CACHE_KEYS"
+	MaxCacheKeysDefault         = "10000"
+	CacheEnabledEnv             = "CACHE_ENABLED"
+	CacheEnabledDefault         = "true"
+	ClaimMappingsEnv            = "CLAIM_MAPPINGS"
 )
 
 // NewConfig creates a new Config from the current env
@@ -48,6 +50,7 @@ func NewConfig() *Config {
 	c.jwksURL = required(JwksURLEnv)
 	c.claimMappingFilePath = withDefault(ClaimMappingFileEnv, ClaimMappingFileDefault)
 	c.authHeader = withDefault(AuthHeaderEnv, AuthHeaderDefault)
+	c.tokenValidatedHeader = withDefault(TokenValidatedHeaderEnv, TokenValidatedHeaderDefault)
 	c.port = withDefault(PortEnv, PortDefault)
 	c.logLevel = withDefault(LogLevelEnv, LogLevelDefault)
 	c.logType = withDefault(LogTypeEnv, LogTypeDefault)
@@ -63,6 +66,7 @@ type Config struct {
 	jwksURL              envVar
 	claimMappingFilePath envVar
 	authHeader           envVar
+	tokenValidatedHeader envVar
 	port                 envVar
 	logLevel             envVar
 	logType              envVar
@@ -118,7 +122,7 @@ func (c *Config) getServer(r *prom.Registry) *decoder.Server {
 	} else {
 		dec = jwsDec
 	}
-	return decoder.NewServer(dec, c.authHeader.get())
+	return decoder.NewServer(dec, c.authHeader.get(), c.tokenValidatedHeader.get())
 }
 
 func (c *Config) getLogger() (logger zerolog.Logger) {
