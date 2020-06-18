@@ -18,6 +18,35 @@ end destination.
 
 ## Installation and usage
 
+### Minimal with helm
+
+The below example will deploy `traefik-jwt-decode` into kubernetes which 
+will map the claims `email` and `scopes` into the headers `jwt-token-email` and
+`jwt-token-scopes`. 
+It will then create a traefik forwardAuth middleware that forwards the 
+`jwt-token-email` and `jwt-token-scopes` to the upstream service.
+```
+cd _helm
+
+helm install traefik-jwt-decode traefik-jwt-decode \
+  --set env.JWKS_URL="https://www.googleapis.com/oauth2/v3/certs" \
+  --set env.CLAIM_MAPPINGS="email:jwt-token-email,scopes:jwt-token-scopes"
+
+cat <<EOF >> traefik-auth-resource.yaml
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: jwt-decode-auth
+spec:
+  forwardAuth:
+    address: http://traefik-jwt-decode:8080
+    authResponseHeaders:
+      - jwt-token-email
+      - jwt-token-scopes
+EOF
+kubectl apply -f traefik-auth-resource.yaml
+```
+
 ### Configuring and running the docker image:
 
 minimal (with claimMapping env variable)
@@ -56,14 +85,14 @@ PORT                    = 8080
 LOG_LEVEL               = info           = trace | debug | info | warn | crit
 LOG_TYPE                = json           = json | pretty
 MAX_CACHE_KEYS          = 10000
+CACHE_ENABLED           = true
 ```
 
 optional configurations
 ```
-CLAIM_MAPPINGS
+CLAIM_MAPPINGS=claim1:header1,claim2:header2
 set up claim mappings by env, on the format
-{claim1}:{header1},{claim2}:{header2}
-corresponds to the json
+the above corresponds to the json
 
 {
   "claim1": "header1",

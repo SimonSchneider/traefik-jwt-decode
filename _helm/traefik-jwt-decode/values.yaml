@@ -21,6 +21,7 @@ env:
   LOG_LEVEL: "info"
   LOG_TYPE: "json"
   MAX_CACHE_KEYS: "10000"
+  CACHE_ENABLED: "true"
 #  CLAIM_MAPPINGS: "claim1:header1"
 
 claimMappings: |
