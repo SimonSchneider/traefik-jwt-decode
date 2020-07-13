@@ -9,6 +9,7 @@ TAG=1.0.0-snapshot
 BINARY_NAME=$(BUILD_DIR)/main
 MAIN_FILE=cmd/main.go
 OUT_DIR=_out
+COVER_PKG=$(shell go list ./... | grep -v "**test\|cmd" | paste -s -d"," -)
 COVER_FILE=$(OUT_DIR)/test.cover
 BENCH_N=0
 BENCH_TIME=10s
@@ -29,9 +30,11 @@ bench: outdir
 cover: test
 	go tool cover -html $(COVER_FILE)
 race: deps lint outdir
-	$(GOTEST) -coverprofile "$(COVERFILE)" -race ./... -v
+	$(GOTEST) -coverpkg $(COVER_PKG) -coverprofile "$(COVERFILE)" -race ./... -v
+	go tool cover -func $(COVER_FILE) | grep total
 test: deps lint outdir
-	$(GOTEST) -coverprofile "$(COVER_FILE)" ./... -v
+	$(GOTEST) -coverpkg $(COVER_PKG) -coverprofile "$(COVER_FILE)" ./... -v
+	go tool cover -func $(COVER_FILE) | grep total
 lint:
 	go mod tidy
 	go fmt ./...
