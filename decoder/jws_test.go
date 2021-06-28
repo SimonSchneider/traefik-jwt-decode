@@ -29,6 +29,6 @@ func TestTokenWithInvalidClaims(t *testing.T) {
 	for k, v := range invalidTokens {
 		token := tc.NewValidToken(map[string]interface{}{claimKey: v})
 		resp, err := dec.Decode(dt.Ctx(), string(token))
-		dt.Report(t, err == nil, "able to decode token with unexpected type: (%s : %+v) into %+v", k, v, resp)
+		dt.Report(t, err != nil, "not able to decode token with unusual JSON type: (%s : %+v) into %+v", k, v, resp)
 	}
 }

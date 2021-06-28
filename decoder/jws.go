@@ -2,6 +2,7 @@ package decoder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/jwk"
@@ -51,7 +52,13 @@ func (d *jwsDecoder) Decode(ctx context.Context, rawJws string) (*Token, error) 
 			if strVal, ok := value.(string); ok {
 				token.Claims[destKey] = strVal
 			} else {
-				return nil, UnexpectedClaimTypeError{key, value}
+				strJson, err := json.Marshal(value)
+
+				if err != nil {
+					return nil, UnexpectedClaimTypeError{key, value}
+				}
+
+				token.Claims[destKey] = string(strJson)
 			}
 		}
 	}
