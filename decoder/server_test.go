@@ -2,6 +2,7 @@ package decoder_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	rnd "math/rand"
 	"net/http"
@@ -24,16 +25,22 @@ const (
 )
 
 var (
-	allClaims = map[string]string{
+	allClaims = map[string]interface{}{
 		"claim1":     "claim number 1",
 		"claim2":     "claim number 2",
 		"claim3":     "claim number 3",
+		"claim:4":    "claim number 4",
+		"claim5":     []string{"claim number 5"},
+		"claim6":     map[string]string{"claim": "number 6"},
 		"otherClaim": "this-claim-is-not-set",
 	}
 	claimMappings = map[string]string{
 		"claim1":    "test-token-claim1",
 		"claim2":    "test-token-claim2",
 		"claim3":    "test-token-claim3",
+		"claim:4":   "test-token-claim4",
+		"claim5":    "test-token-claim5",
+		"claim6":    "test-token-claim6",
 		randomClaim: randomClaimHeader,
 	}
 )
@@ -94,6 +101,12 @@ func TestServerResponseHeaders(t *testing.T) {
 				}
 				headerVal := headers.Get(headerKey)
 				claimVal := allClaims[claimKey]
+				if strVal, ok := claimVal.(string); ok {
+					claimVal = strVal
+				} else {
+					strJson, _ := json.Marshal(claimVal)
+					claimVal = string(strJson)
+				}
 				dt.Report(t, headerVal != claimVal, "claim '%s=%s' has incorrect val '%s=%s'", claimKey, claimVal, headerKey, headerVal)
 			}
 		}

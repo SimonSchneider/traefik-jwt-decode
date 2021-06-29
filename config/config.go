@@ -191,11 +191,13 @@ func (c claimMappingsT) fromFile(path string) error {
 func (c claimMappingsT) fromString(val string) error {
 	mappings := strings.Split(val, ",")
 	for _, mapping := range mappings {
-		pair := strings.Split(mapping, ":")
-		if len(pair) != 2 {
+		lastInd := strings.LastIndex(mapping, ":")
+		if lastInd == -1 {
 			return fmt.Errorf("unexpected number of ':' in claim mapping '%s'", mapping)
 		}
-		c[pair[0]] = pair[1]
+		key := mapping[:lastInd]
+		value := mapping[lastInd+1:]
+		c[key] = value
 	}
 	return nil
 }

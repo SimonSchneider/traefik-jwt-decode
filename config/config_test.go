@@ -17,14 +17,15 @@ import (
 
 var (
 	claims = map[string]interface{}{
-		"claim1": "claim value 1",
-		"claim2": "claim value 2",
-		"claim3": "claim value 3",
+		"claim1":  "claim value 1",
+		"claim2":  "claim value 2",
+		"claim:3": "claim value 3",
 	}
-	claimMappingString = "claim1:claimHeader1,claim2:claimHeader2"
+	claimMappingString = "claim1:claimHeader1,claim2:claimHeader2,claim:3:claimHeader3"
 	claimMappingMap    = map[string]string{
-		"claim1": "claimHeader1",
-		"claim2": "claimHeader2",
+		"claim1":  "claimHeader1",
+		"claim2":  "claimHeader2",
+		"claim:3": "claimHeader3",
 	}
 )
 
@@ -73,7 +74,7 @@ func TestMergeClaimMappingsFileAndEnv(t *testing.T) {
 	dt.HandleByPanic(err)
 	defer os.Remove(file.Name())
 	json.NewEncoder(file).Encode(map[string]string{"claim1": "claimHeader1"})
-	os.Setenv(c.ClaimMappingsEnv, "claim2:claimHeader2")
+	os.Setenv(c.ClaimMappingsEnv, "claim2:claimHeader2,claim:3:claimHeader3")
 	os.Setenv(c.ClaimMappingFileEnv, file.Name())
 	validateCorrectSetup(t, tc, c.AuthHeaderDefault)
 }
@@ -89,7 +90,7 @@ func validateCorrectSetup(t *testing.T, tc *dt.TestConfig, authKey string) {
 	dt.HandleByPanic(err)
 	dt.Report(t, resp.Header.Get("claimHeader1") != claims["claim1"], "incorrect header for claim1")
 	dt.Report(t, resp.Header.Get("claimHeader2") != claims["claim2"], "incorrect header for claim2")
-	dt.Report(t, resp.Header.Get("claimHeader3") != "", "incorrect header for claim2")
+	dt.Report(t, resp.Header.Get("claimHeader3") != claims["claim:3"], "incorrect header for claim:3")
 	validateMetrics(t, port)
 	err = l.Close()
 	dt.HandleByPanic(err)
