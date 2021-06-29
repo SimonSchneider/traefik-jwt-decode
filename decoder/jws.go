@@ -52,13 +52,13 @@ func (d *jwsDecoder) Decode(ctx context.Context, rawJws string) (*Token, error) 
 			if strVal, ok := value.(string); ok {
 				token.Claims[destKey] = strVal
 			} else {
-				strJson, err := json.Marshal(value)
+				strJSON, err := json.Marshal(value)
 
 				if err != nil {
 					return nil, UnexpectedClaimTypeError{key, value}
 				}
 
-				token.Claims[destKey] = string(strJson)
+				token.Claims[destKey] = string(strJSON)
 			}
 		}
 	}
