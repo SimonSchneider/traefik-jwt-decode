@@ -144,7 +144,17 @@ func TestFailsOnBadJwksURL(t *testing.T) {
 	tc := dt.NewTest()
 	defaultEnv(tc)
 	os.Setenv(c.JwksURLEnv, "http://non-existing/.jwks.url")
+	os.Setenv(c.ForceJwksOnStart, "true")
 	validatePanicsWhenStarting(t)
+}
+
+func TestWarningOnBadJwksURL(t *testing.T) {
+	os.Clearenv()
+	tc := dt.NewTest()
+	defaultEnv(tc)
+	os.Setenv(c.JwksURLEnv, "http://non-existing/.jwks.url")
+	os.Setenv(c.ForceJwksOnStart, "false")
+	validateWarningWhenStarting(t)
 }
 
 func TestFailsOnBadLogLevel(t *testing.T) {
@@ -162,6 +172,17 @@ func validatePanicsWhenStarting(t *testing.T) {
 			return
 		}
 		t.Fatal("function did not panic")
+	}()
+	c.NewConfig().RunServer()
+}
+
+func validateWarningWhenStarting(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Logf("function recovered")
+			return
+		}
+		t.Fatal("function did not recover")
 	}()
 	c.NewConfig().RunServer()
 }

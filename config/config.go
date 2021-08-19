@@ -25,6 +25,8 @@ import (
 // Env variable constants
 const (
 	JwksURLEnv                  = "JWKS_URL"
+	ForceJwksOnStart            = "FORCE_JWKS_ON_START"
+	ForceJwksOnStartDefault     = "false"
 	ClaimMappingFileEnv         = "CLAIM_MAPPING_FILE_PATH"
 	ClaimMappingFileDefault     = "config.json"
 	AuthHeaderEnv               = "AUTH_HEADER_KEY"
@@ -48,6 +50,7 @@ const (
 func NewConfig() *Config {
 	var c Config
 	c.jwksURL = required(JwksURLEnv)
+	c.forceJwksOnStart = withDefault(ForceJwksOnStart, ForceJwksOnStartDefault)
 	c.claimMappingFilePath = withDefault(ClaimMappingFileEnv, ClaimMappingFileDefault)
 	c.authHeader = withDefault(AuthHeaderEnv, AuthHeaderDefault)
 	c.tokenValidatedHeader = withDefault(TokenValidatedHeaderEnv, TokenValidatedHeaderDefault)
@@ -64,6 +67,7 @@ func NewConfig() *Config {
 // Config to bootstrap decoder server
 type Config struct {
 	jwksURL              envVar
+	forceJwksOnStart     envVar
 	claimMappingFilePath envVar
 	authHeader           envVar
 	tokenValidatedHeader envVar
@@ -109,7 +113,11 @@ func (c *Config) getServer(r *prom.Registry) *decoder.Server {
 	claimMappings := c.getClaimMappings()
 	jwsDec, err := decoder.NewJwsDecoder(jwksURL, claimMappings)
 	if err != nil {
-		panic(err)
+		if c.forceJwksOnStart.getBool() {
+			panic(err)
+		} else {
+			log.Warn().Err(err).Msg("will try again")
+		}
 	}
 	claimMsg := zerolog.Dict()
 	for k, v := range claimMappings {

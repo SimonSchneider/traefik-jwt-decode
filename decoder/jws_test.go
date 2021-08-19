@@ -8,10 +8,10 @@ import (
 	"github.com/SimonSchneider/traefik-jwt-decode/decoder"
 )
 
-func TestInvalidJwksURLFailsFast(t *testing.T) {
+func TestInvalidJwksURLGivesWarning(t *testing.T) {
 	claimMapping := make(map[string]string)
-	_, err := decoder.NewJwsDecoder("https://this.com/does/not/exist", claimMapping)
-	dt.Report(t, err == nil, "able to create jws decoder with incorrect jwks url")
+	dec, err := decoder.NewJwsDecoder("https://this.com/does/not/exist", claimMapping)
+	dt.Report(t, dec == nil && err == nil, "not able to create jws decoder with incorrect jwks url, and no warning given")
 }
 
 func TestTokenWithInvalidClaims(t *testing.T) {
