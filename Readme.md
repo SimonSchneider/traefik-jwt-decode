@@ -94,6 +94,7 @@ LOG_LEVEL                  = info                = trace | debug | info | warn |
 LOG_TYPE                   = json                = json | pretty
 MAX_CACHE_KEYS             = 10000
 CACHE_ENABLED              = true
+FORCE_JWKS_ON_START        = true
 ```
 
 optional configurations
