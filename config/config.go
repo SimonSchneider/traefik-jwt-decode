@@ -26,7 +26,7 @@ import (
 const (
 	JwksURLEnv                  = "JWKS_URL"
 	ForceJwksOnStart            = "FORCE_JWKS_ON_START"
-	ForceJwksOnStartDefault     = "false"
+	ForceJwksOnStartDefault     = "true"
 	ClaimMappingFileEnv         = "CLAIM_MAPPING_FILE_PATH"
 	ClaimMappingFileDefault     = "config.json"
 	AuthHeaderEnv               = "AUTH_HEADER_KEY"
