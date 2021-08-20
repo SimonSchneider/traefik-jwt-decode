@@ -14,6 +14,12 @@ func TestInvalidJwksURLGivesWarning(t *testing.T) {
 	dt.Report(t, dec == nil && err == nil, "not able to create jws decoder with incorrect jwks url, and no warning given")
 }
 
+func TestValidJwksURL(t *testing.T) {
+	claimMapping := make(map[string]string)
+	dec, err := decoder.NewJwsDecoder("https://www.googleapis.com/oauth2/v3/certs", claimMapping)
+	dt.Report(t, dec == nil || err != nil, "not able to create jws decoder with correct jwks url")
+}
+
 func TestTokenWithInvalidClaims(t *testing.T) {
 	invalidTokens := map[string]interface{}{
 		"int":    123,
