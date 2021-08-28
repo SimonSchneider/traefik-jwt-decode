@@ -11,7 +11,7 @@ import (
 func TestInvalidJwksURLGivesWarning(t *testing.T) {
 	claimMapping := make(map[string]string)
 	dec, err := decoder.NewJwsDecoder("https://this.com/does/not/exist", claimMapping)
-	dt.Report(t, dec == nil && err == nil, "not able to create jws decoder with incorrect jwks url, and no warning given")
+	dt.Report(t, dec == nil && err == nil, "not able to create jws decoder with incorrect jwks url, and no warning given: %s", err)
 }
 
 func TestValidJwksURL(t *testing.T) {
