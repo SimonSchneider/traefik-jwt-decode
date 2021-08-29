@@ -199,6 +199,9 @@ func (c claimMappingsT) fromFile(path string) error {
 func (c claimMappingsT) fromString(val string) error {
 	mappings := strings.Split(val, ",")
 	for _, mapping := range mappings {
+		if len(mapping) == 0 {
+			continue
+		}
 		lastInd := strings.LastIndex(mapping, ":")
 		if lastInd == -1 {
 			return fmt.Errorf("unexpected number of ':' in claim mapping '%s'", mapping)
