@@ -47,7 +47,7 @@ type TestConfig struct {
 	// JwksURL is where the JWKS is hosted
 	JwksURL    string
 	privateKey *rsa.PrivateKey
-	opts       jws.Option
+	opts       jws.SignOption
 }
 
 // NewTest creates a new test config
@@ -57,12 +57,13 @@ func NewTest() *TestConfig {
 	tc.privateKey, jwkKey = generateKey()
 	jwkKeyID := jwkKey.KeyID()
 	tc.opts = options(jwkKeyID)
-	jwks := &jwk.Set{Keys: []jwk.Key{jwkKey}}
+	jwks := jwk.NewSet()
+	jwks.Add(jwkKey)
 	tc.JwksURL = startJwksServer(jwks)
 	return tc
 }
 
-func options(kid string) jws.Option {
+func options(kid string) jws.SignOption {
 	h := jws.NewHeaders()
 	h.Set(jws.TypeKey, "JWT")
 	h.Set(jws.KeyIDKey, kid)
@@ -80,7 +81,7 @@ func generateKey() (*rsa.PrivateKey, jwk.Key) {
 	return privKey, jwkKey
 }
 
-func startJwksServer(jwks *jwk.Set) string {
+func startJwksServer(jwks jwk.Set) string {
 	keys, err := json.Marshal(jwks)
 	HandleByPanic(err)
 	listener, err := net.Listen("tcp", ":0")

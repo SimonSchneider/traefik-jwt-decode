@@ -15,6 +15,7 @@ type jwsDecoder struct {
 	jwks         *jwk.Set
 	claimMapping map[string]string
 	jwksURL      string
+	jwksFetcher  *jwk.AutoRefresh
 	mutex        sync.RWMutex
 }
 
@@ -34,27 +35,15 @@ func (e UnexpectedClaimTypeError) Error() string {
 // `claimMapping = map[string][string]{ "key123", "headerKey123" }`
 // will cause the claim `key123` in the JWS token to be mapped to `headerKey123` in the decoded token
 func NewJwsDecoder(jwksURL string, claimMapping map[string]string) (TokenDecoder, error) {
-	d := jwsDecoder{claimMapping: claimMapping, jwksURL: jwksURL}
-	_, err := d.getJWKs()
+	ar := jwk.NewAutoRefresh(context.Background())
+	ar.Configure(jwksURL)
+	d := jwsDecoder{claimMapping: claimMapping, jwksFetcher: ar, jwksURL: jwksURL}
+	_, err := ar.Fetch(context.Background(), jwksURL)
 	return &d, err
 }
 
-func (d *jwsDecoder) getJWKs() (*jwk.Set, error) {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-	if d.jwks != nil {
-		return d.jwks, nil
-	}
-	jwks, err := jwk.FetchHTTP(d.jwksURL)
-	if err != nil {
-		return nil, fmt.Errorf("jwks: failed to fetch from url %s: %w", d.jwksURL, err)
-	}
-	d.jwks = jwks
-	return d.jwks, nil
-}
-
 func (d *jwsDecoder) Decode(ctx context.Context, rawJws string) (*Token, error) {
-	jwtToken, err := d.parseAndValidate(rawJws)
+	jwtToken, err := d.parseAndValidate(ctx, rawJws)
 	if err != nil {
 		return nil, err
 	}
@@ -80,12 +69,12 @@ func (d *jwsDecoder) Decode(ctx context.Context, rawJws string) (*Token, error) 
 	return token, nil
 }
 
-func (d *jwsDecoder) parseAndValidate(rawJws string) (jwt.Token, error) {
-	jwks, err := d.getJWKs()
+func (d *jwsDecoder) parseAndValidate(ctx context.Context, rawJws string) (jwt.Token, error) {
+	jwks, err := d.jwksFetcher.Fetch(ctx, d.jwksURL)
 	if err != nil {
 		return nil, err
 	}
-	_, err = jws.VerifyWithJWKSet([]byte(rawJws), jwks, nil)
+	_, err = jws.VerifySet([]byte(rawJws), jwks)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify token with jwks: %w", err)
 	}
