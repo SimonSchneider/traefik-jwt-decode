@@ -17,7 +17,7 @@ type Server struct {
 	decoder                 TokenDecoder
 	authHeaderKey           string
 	tokenValidatedHeaderKey string
-        authHeaderRequired      bool
+	authHeaderRequired      bool
 }
 
 // NewServer returns a new server that will decode the header with key authHeaderKey
@@ -39,7 +39,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 			status = http.StatusOK
 			rw.Header().Set(s.tokenValidatedHeaderKey, "false")
 			log.Debug().Int(statusKey, http.StatusOK).Str(s.tokenValidatedHeaderKey, "false").Msgf("no auth header %s, early exit", s.authHeaderKey)
-                }
+		}
 		rw.WriteHeader(status)
 		return
 	}

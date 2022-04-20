@@ -30,7 +30,7 @@ const (
 	AuthHeaderKey = "Authorization"
 	// TokenValidatedHeaderKey for the test
 	TokenValidatedHeaderKey = "jwt-token-validated"
-        // AuthHeaderRequired for the test
+	// AuthHeaderRequired for the test
 	AuthHeaderRequired = false
 )
 
