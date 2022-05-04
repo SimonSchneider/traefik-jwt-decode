@@ -18,7 +18,9 @@ headers mapped from the claims of the token and an additional (configurable) `jw
 Traefik should be configured to forward these headers via the `authResponseHeaders` which forwards them to the
 end destination.
 
-If no token is present on the request `traefik-jwt-decode`will return 200 and set the header `jwt-token-validated: false`.
+If no token is present on the request and `AUTH_HEADER_REQUIRED` is `true`, `traefik-jwt-decode` will return 401.
+
+If no token is present on the request and `AUTH_HEADER_REQUIRED` is `false`, `traefik-jwt-decode` will return 200 and set the header `jwt-token-validated: false`.
 
 ## Installation and usage
 
@@ -89,6 +91,7 @@ default configurations
 CLAIM_MAPPING_FILE_PATH    = config.json
 AUTH_HEADER_KEY            = Authorization
 TOKEN_VALIDATED_HEADER_KEY = jwt-token-validated
+AUTH_HEADER_REQUIRED       = false
 PORT                       = 8080
 LOG_LEVEL                  = info                = trace | debug | info | warn | crit
 LOG_TYPE                   = json                = json | pretty

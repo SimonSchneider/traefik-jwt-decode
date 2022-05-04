@@ -17,12 +17,13 @@ type Server struct {
 	decoder                 TokenDecoder
 	authHeaderKey           string
 	tokenValidatedHeaderKey string
+	authHeaderRequired      bool
 }
 
 // NewServer returns a new server that will decode the header with key authHeaderKey
 // with the given TokenDecoder decoder.
-func NewServer(decoder TokenDecoder, authHeaderKey, tokenValidatedHeaderKey string) *Server {
-	return &Server{decoder: decoder, authHeaderKey: authHeaderKey, tokenValidatedHeaderKey: tokenValidatedHeaderKey}
+func NewServer(decoder TokenDecoder, authHeaderKey, tokenValidatedHeaderKey string, authHeaderRequired bool) *Server {
+	return &Server{decoder: decoder, authHeaderKey: authHeaderKey, tokenValidatedHeaderKey: tokenValidatedHeaderKey, authHeaderRequired: authHeaderRequired}
 }
 
 // DecodeToken http handler
@@ -30,9 +31,16 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
-		log.Debug().Int(statusKey, http.StatusOK).Str(s.tokenValidatedHeaderKey, "false").Msgf("no auth header %s, early exit", s.authHeaderKey)
-		rw.Header().Set(s.tokenValidatedHeaderKey, "false")
-		rw.WriteHeader(http.StatusOK)
+		var status int
+		if s.authHeaderRequired {
+			status = http.StatusUnauthorized
+			log.Warn().Int(statusKey, status).Msgf("no auth header %s, early exit", s.authHeaderKey)
+		} else {
+			status = http.StatusOK
+			rw.Header().Set(s.tokenValidatedHeaderKey, "false")
+			log.Debug().Int(statusKey, http.StatusOK).Str(s.tokenValidatedHeaderKey, "false").Msgf("no auth header %s, early exit", s.authHeaderKey)
+		}
+		rw.WriteHeader(status)
 		return
 	}
 	authHeader := r.Header.Get(s.authHeaderKey)
