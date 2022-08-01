@@ -48,6 +48,10 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	// var errs []error
 	tokenValidated := false
 	for _, d := range s.decoders {
+		if tokenValidated {
+			continue
+		}
+
 		t, err := d.Decode(ctx, strings.TrimPrefix(authHeader, "Bearer "))
 
 		if err != nil {
