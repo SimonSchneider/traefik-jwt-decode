@@ -142,12 +142,13 @@ func (tc *TestConfig) newCachedDecoder(claimMappings map[string]string) decoder.
 
 // UncachedServer creates an uncached server
 func (tc *TestConfig) UncachedServer(claimMappings map[string]string) *decoder.Server {
-	return decoder.NewServer(tc.newJwsDecoder(claimMappings), AuthHeaderKey, TokenValidatedHeaderKey, AuthHeaderRequired)
+
+	return decoder.NewServer([]decoder.TokenDecoder{tc.newJwsDecoder(claimMappings)}, AuthHeaderKey, TokenValidatedHeaderKey, AuthHeaderRequired)
 }
 
 // CachedServer creates a cached server
 func (tc *TestConfig) CachedServer(claimMappings map[string]string) *decoder.Server {
-	return decoder.NewServer(tc.newCachedDecoder(claimMappings), AuthHeaderKey, TokenValidatedHeaderKey, AuthHeaderRequired)
+	return decoder.NewServer([]decoder.TokenDecoder{tc.newCachedDecoder(claimMappings)}, AuthHeaderKey, TokenValidatedHeaderKey, AuthHeaderRequired)
 }
 
 // Report the error message to testing if the condition is met

@@ -1,0 +1,33 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: filter-paper
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`filter-paper.papercup.com`)
+      services:
+        - name: {{ include "traefik-jwt-decode.fullname" . }}
+          port: 8080
+      kind: Rule
+  tls:
+    certResolver: letsencrypt
+---
+# apiVersion: traefik.containo.us/v1alpha1
+# kind: IngressRoute
+# metadata:
+#   name: target
+# spec:
+#   entryPoints:
+#     - websecure
+#   routes:
+#     - match: Host(`biblioteca-joel.papercup.com`)
+#       services:
+#         - name: {{ include "traefik-jwt-decode.fullname" . }}
+#           port: 8080
+#       kind: Rule
+#       middlewares:
+#         - name: filter-paper
+#   tls:
+#     certResolver: letsencrypt
