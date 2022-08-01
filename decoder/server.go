@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -18,6 +19,11 @@ type Server struct {
 	authHeaderKey           string
 	tokenValidatedHeaderKey string
 	authHeaderRequired      bool
+}
+
+type statuses struct {
+	err    error
+	status int
 }
 
 // NewServer returns a new server that will decode the header with key authHeaderKey
@@ -45,18 +51,21 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	}
 	authHeader := r.Header.Get(s.authHeaderKey)
 
-	// var errs []error
-	tokenValidated := false
+	// var errs []statuses
 	for _, d := range s.decoders {
 		t, err := d.Decode(ctx, strings.TrimPrefix(authHeader, "Bearer "))
 
 		if err != nil {
-			// errs = append(errs, fmt.Errorf("decode token: %w", err))
+			log.Warn().Err(err).Int(statusKey, http.StatusUnauthorized).Msg("unable to decode token")
+			// errs = append(errs, statuses{err: err, status: http.StatusUnauthorized})
+			rw.WriteHeader(http.StatusUnauthorized)
 			continue
 		}
 
 		if err = t.Validate(); err != nil {
-			// errs = append(errs, fmt.Errorf("validate token: %w", err))
+			// errs = append(errs, statuses{err: err, status: http.StatusUnauthorized})
+			log.Warn().Err(err).Int(statusKey, http.StatusUnauthorized).Msg("unable to validate token")
+			rw.WriteHeader(http.StatusUnauthorized)
 			continue
 		}
 
@@ -65,15 +74,11 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 			rw.Header().Set(k, v)
 			le.Str(k, v)
 		}
-		tokenValidated = true
+		fmt.Println("here")
 		rw.Header().Set(s.tokenValidatedHeaderKey, "true")
 		le.Str(s.tokenValidatedHeaderKey, "true")
 		le.Int(statusKey, http.StatusOK).Msg("ok")
 		rw.WriteHeader(http.StatusOK)
-	}
-
-	if !tokenValidated {
-		rw.WriteHeader(http.StatusUnauthorized)
 	}
 
 }
