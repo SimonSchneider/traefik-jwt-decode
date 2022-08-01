@@ -25,6 +25,7 @@ import (
 // Env variable constants
 const (
 	JwksURLEnv                  = "JWKS_URL"
+	JwksUrlDevEnv               = "JWKS_URL_DEV"
 	ForceJwksOnStart            = "FORCE_JWKS_ON_START"
 	ForceJwksOnStartDefault     = "true"
 	ClaimMappingFileEnv         = "CLAIM_MAPPING_FILE_PATH"
@@ -34,7 +35,7 @@ const (
 	TokenValidatedHeaderEnv     = "TOKEN_VALIDATED_HEADER_KEY"
 	TokenValidatedHeaderDefault = "jwt-token-validated"
 	AuthHeaderRequired          = "AUTH_HEADER_REQUIRED"
-	AuthHeaderRequiredDefault   = "false"
+	AuthHeaderRequiredDefault   = "true"
 	PortEnv                     = "PORT"
 	PortDefault                 = "8080"
 	LogLevelEnv                 = "LOG_LEVEL"
@@ -52,6 +53,7 @@ const (
 func NewConfig() *Config {
 	var c Config
 	c.jwksURL = required(JwksURLEnv)
+	c.jwksURLDev = required(JwksUrlDevEnv)
 	c.forceJwksOnStart = withDefault(ForceJwksOnStart, ForceJwksOnStartDefault)
 	c.claimMappingFilePath = withDefault(ClaimMappingFileEnv, ClaimMappingFileDefault)
 	c.authHeader = withDefault(AuthHeaderEnv, AuthHeaderDefault)
@@ -70,6 +72,7 @@ func NewConfig() *Config {
 // Config to bootstrap decoder server
 type Config struct {
 	jwksURL              envVar
+	jwksURLDev           envVar
 	forceJwksOnStart     envVar
 	claimMappingFilePath envVar
 	authHeader           envVar
@@ -87,7 +90,6 @@ type Config struct {
 func (c *Config) PingHandler(rw http.ResponseWriter, r *http.Request) {
 	log.Debug().Msg("Ping OK")
 	rw.WriteHeader(http.StatusOK)
-	return
 }
 
 // RunServer starts a server from the config
@@ -121,8 +123,11 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 }
 
 func (c *Config) getServer(r *prom.Registry) *decoder.Server {
-	jwksURL := c.jwksURL.get()
 	claimMappings := c.getClaimMappings()
+
+	var decoders []decoder.TokenDecoder
+
+	jwksURL := c.jwksURL.get()
 	jwsDec, err := decoder.NewJwsDecoder(jwksURL, claimMappings)
 	if err != nil {
 		if c.forceJwksOnStart.getBool() {
@@ -131,16 +136,31 @@ func (c *Config) getServer(r *prom.Registry) *decoder.Server {
 			log.Warn().Err(err).Msg("will try again")
 		}
 	}
+	decoders = append(decoders, jwsDec)
+
+	jwksURLDev := c.jwksURLDev.get()
+	jwsDecDev, err := decoder.NewJwsDecoder(jwksURLDev, claimMappings)
+	if err != nil {
+		if c.forceJwksOnStart.getBool() {
+			panic(err)
+		} else {
+			log.Warn().Err(err).Msg("will try again")
+		}
+	}
+	decoders = append(decoders, jwsDecDev)
+
 	claimMsg := zerolog.Dict()
 	for k, v := range claimMappings {
 		claimMsg.Str(k, v)
 	}
 	log.Info().Dict("mappings", claimMsg).Msg("mappings from claim keys to header")
-	var dec decoder.TokenDecoder
+	var dec []decoder.TokenDecoder
 	if c.cacheEnabled.getBool() {
-		dec = decoder.NewCachedJwtDecoder(c.getCache(r), jwsDec)
+		for _, d := range decoders {
+			dec = append(dec, decoder.NewCachedJwtDecoder(c.getCache(r), d))
+		}
 	} else {
-		dec = jwsDec
+		dec = decoders
 	}
 	return decoder.NewServer(dec, c.authHeader.get(), c.tokenValidatedHeader.get(), c.authHeaderRequired.getBool())
 }
@@ -176,7 +196,7 @@ func (c *Config) getCache(r *prom.Registry) *ristretto.Cache {
 	if err != nil {
 		panic(err)
 	}
-	c.registerCacheMetrics(r, cache)
+	// c.registerCacheMetrics(r, cache) // TODO: handle dev and prod caches
 	return cache
 }
 
