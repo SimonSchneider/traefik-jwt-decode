@@ -22,8 +22,6 @@ jobs:
   deploy:
     executor: aws-ecr/default
     parameters:
-      service:
-        type: string
       stage:
         type: string
       values-to-override:
