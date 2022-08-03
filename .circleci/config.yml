@@ -14,21 +14,6 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-  build-and-push-image:
-    executor: aws-ecr/default
-    parameters:
-      stage:
-        type: string
-    environment:
-      DOCKER_BUILDKIT: 1
-      ACCOUNT_URL: ${AWS_ECR_ACCOUNT_URL}
-    steps:
-      - checkout
-      - aws-ecr/build-and-push-image:
-          checkout: true
-          region: ${AWS_DEFAULT_REGION}
-          repo: filter-paper
-          tag: $CIRCLE_SHA1,latest
   deploy:
     executor: aws-ecr/default
     parameters:
@@ -53,17 +38,20 @@ jobs:
 
 workflows:
   version: 2
-  build_accept_deploy:
+  build_and_deploy:
     jobs:
       - prepare
       - allow-dev:
           type: approval
           requires:
             - prepare
-      - build-and-push-image:
-          name: build-and-push-image-dev
+      - aws-ecr/build-and-push-image:
+          name: aws-ecr/build-and-push-image-dev
           context: AWS
-          stage: dev
+          region: $AWS_DEFAULT_REGION
+          registry-id: AWS_ACCOUNT_ID
+          repo: filter-paper
+          tag: $CIRCLE_SHA1
           requires:
             - allow-dev
       - deploy:
@@ -71,7 +59,7 @@ workflows:
           context: AWS
           stage: dev
           requires:
-            - build-and-push-image-dev
+            - aws-ecr/build-and-push-image-dev
       
       - allow-prod:
           type: approval
@@ -80,10 +68,13 @@ workflows:
               only: main
           requires:
             - prepare
-      - build-and-push-image:
-          name: build-and-push-image-prod
+      - aws-ecr/build-and-push-image:
+          name: aws-ecr/build-and-push-image-prod
           context: AWS
-          stage: prod
+          region: $AWS_DEFAULT_REGION
+          registry-id: AWS_ACCOUNT_ID
+          repo: filter-paper
+          tag: $CIRCLE_SHA1
           requires:
             - allow-prod
       - deploy:
@@ -91,4 +82,4 @@ workflows:
           context: AWS
           stage: prod
           requires:
-            - build-and-push-image-prod
+            - aws-ecr/build-and-push-image-prod
