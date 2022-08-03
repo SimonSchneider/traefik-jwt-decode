@@ -20,6 +20,7 @@ jobs:
       stage:
         type: string
     steps:
+      - checkout
       - aws-ecr/build-and-push-image:
           checkout: true
           region: ${AWS_DEFAULT_REGION}
