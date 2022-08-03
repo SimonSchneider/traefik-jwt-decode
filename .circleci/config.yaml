@@ -1,0 +1,82 @@
+version: 2.1
+
+orbs:
+  aws-ecr: circleci/aws-ecr@8.1.2
+  kubernetes: circleci/kubernetes@1.3
+  helm: circleci/helm@1.2.0
+
+jobs:
+  build-and-push-image:
+    executor: aws-ecr/default
+    parameters:
+      stage:
+        type: string
+    environment:
+      ACCOUNT_URL: ${AWS_ECR_ACCOUNT_URL}
+    steps:
+      - aws-ecr/build-and-push-image:
+          checkout: true
+          region: ${AWS_DEFAULT_REGION}
+          repo: filter-paper
+          tag: $CIRCLE_SHA1,latest
+  deploy:
+    executor: aws-ecr/default
+    parameters:
+      service:
+        type: string
+      stage:
+        type: string
+      values-to-override:
+        type: string
+        default: ""
+    steps:
+      - checkout
+      - run:
+          name: Set ~/.kube/config so `kubectl` commands will run
+          command: aws eks update-kubeconfig --region ${AWS_DEFAULT_REGION} --name ${EKS_CLUSTER_NAME}
+      - kubernetes/install-kubectl
+      - run: git clone --branch feature/sc-2201/verify-jwt-at-api-gateway git@github.com:papercup-ai/charts.git # TODO: REMOVE ME
+      - helm/upgrade-helm-chart:
+          chart: ./charts/filter-paper
+          helm-version: v3.4.1
+          release-name: filter-paper-<< parameters.stage >>
+          values: ./k8s/<< parameters.stage >>.yaml
+          values-to-override: image.tag=$CIRCLE_SHA1
+
+workflows:
+  workflows:
+  version: 2
+  build_accept_deploy:
+    jobs:
+      - allow-dev:
+          type: approval
+      - build-and-push-image:
+          name: build-and-push-image-dev
+          context: AWS
+          stage: dev
+          requires:
+            - allow-dev
+      - deploy:
+          name: deploy-dev
+          context: AWS
+          stage: dev
+          requires:
+            - build-and-push-image-dev
+      
+      - allow-prod:
+          type: approval
+          filters:
+            branches:
+              only: main
+      - build-and-push-image:
+          name: build-and-push-image-prod
+          context: AWS
+          stage: prod
+          requires:
+            - allow-prod
+      - deploy:
+          name: deploy-prod
+          context: AWS
+          stage: prod
+          requires:
+            - build-and-push-image-prod
