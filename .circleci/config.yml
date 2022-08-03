@@ -11,8 +11,6 @@ jobs:
     parameters:
       stage:
         type: string
-    environment:
-      ACCOUNT_URL: ${AWS_ECR_ACCOUNT_URL}
     steps:
       - aws-ecr/build-and-push-image:
           checkout: true
