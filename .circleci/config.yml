@@ -28,7 +28,7 @@ jobs:
           name: Set ~/.kube/config so `kubectl` commands will run
           command: aws eks update-kubeconfig --region ${AWS_DEFAULT_REGION} --name ${EKS_CLUSTER_NAME}
       - kubernetes/install-kubectl
-      - run: git clone --branch feature/sc-2201/verify-jwt-at-api-gateway git@github.com:papercup-ai/charts.git # TODO: REMOVE ME
+      - run: git clone git@github.com:papercup-ai/charts.git
       - helm/upgrade-helm-chart:
           chart: ./charts/filter-paper
           helm-version: v3.4.1
