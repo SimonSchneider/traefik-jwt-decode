@@ -30,6 +30,14 @@ func NewServer(decoder TokenDecoder, authHeaderKey, tokenValidatedHeaderKey stri
 func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
+
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Credentials", "true")
+	rw.Header().Set("Access-Control-Allow-Headers",
+		"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
+	)
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
 		var status int
 		if s.authHeaderRequired {
