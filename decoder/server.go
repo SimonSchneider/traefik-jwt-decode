@@ -42,6 +42,8 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	)
 	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE")
 
+	fmt.Println("rw Header", rw.Header()["Access-Control-Allow-Origins"])
+
 	fmt.Println(r.Header["Authorization"])
 
 	fmt.Println(r.Header["X-Forwarded-For"])
