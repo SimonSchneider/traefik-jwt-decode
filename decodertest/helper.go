@@ -83,25 +83,6 @@ func generateKey() (*rsa.PrivateKey, jwk.Key) {
 	return privKey, jwkKey
 }
 
-type MyServer struct {
-	r *http.ServeMux
-}
-
-func (s MyServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if origin := req.Header.Get("Origin"); origin != "" {
-		rw.Header().Set("Access-Control-Allow-Origin", origin)
-		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		rw.Header().Set("Access-Control-Allow-Headers",
-			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	}
-	// Stop here if its Preflighted OPTIONS request
-	if req.Method == "OPTIONS" {
-		return
-	}
-	// Lets Gorilla work
-	s.r.ServeHTTP(rw, req)
-}
-
 func startJwksServer(jwks jwk.Set) string {
 	keys, err := json.Marshal(jwks)
 	HandleByPanic(err)
@@ -115,8 +96,8 @@ func startJwksServer(jwks jwk.Set) string {
 			rw.Write(keys)
 		})
 
-		s := MyServer{r: mux}
-		panic(http.Serve(listener, s))
+		// s := MyServer{r: mux}
+		panic(http.Serve(listener, mux))
 	}()
 	return fmt.Sprintf("http://0.0.0.0:%d%s", listener.Addr().(*net.TCPAddr).Port, path)
 }

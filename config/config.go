@@ -90,6 +90,28 @@ func (c *Config) PingHandler(rw http.ResponseWriter, r *http.Request) {
 	return
 }
 
+type MyServer struct {
+	r *http.ServeMux
+}
+
+func (s MyServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	fmt.Println("\n\n\n OVERRIDE \n\n\n")
+
+	if origin := req.Header.Get("Origin"); origin != "" {
+		rw.Header().Set("Access-Control-Allow-Origin", origin)
+		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		rw.Header().Set("Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	}
+	// Stop here if its Preflighted OPTIONS request
+	if req.Method == "OPTIONS" {
+		fmt.Println("\n\n\nRETURNING\n\n\n")
+		return
+	}
+	// Lets Gorilla work
+	s.r.ServeHTTP(rw, req)
+}
+
 // RunServer starts a server from the config
 func (c *Config) RunServer() (chan error, net.Listener) {
 	logger := c.getLogger()
@@ -112,7 +134,8 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 		mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 		mux.Handle("/ping", pingHandler)
 		mux.Handle("/", histogramMw(loggingMiddleWare(handler)))
-		srv.Handler = mux
+		s := MyServer{r: mux}
+		srv.Handler = s
 		done <- srv.Serve(listener)
 		close(done)
 	}()
