@@ -95,7 +95,7 @@ type MyServer struct {
 }
 
 func (s MyServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	fmt.Println("\n\n\n OVERRIDE \n\n\n")
+	fmt.Println("\n\n\n OVERRIDE \n\n\n,", req.Method)
 
 	if origin := req.Header.Get("Origin"); origin != "" {
 		rw.Header().Set("Access-Control-Allow-Origin", origin)
