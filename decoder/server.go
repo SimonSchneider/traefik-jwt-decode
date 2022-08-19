@@ -40,7 +40,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Access-Control-Expose-Headers",
 		"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
 	)
-	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE")
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
 	fmt.Println("rw Header", rw.Header()["Access-Control-Allow-Origins"])
 
