@@ -29,6 +29,10 @@ func NewServer(decoder TokenDecoder, authHeaderKey, tokenValidatedHeaderKey stri
 
 // DecodeToken http handler
 func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		rw.WriteHeader(http.StatusOK)
+		return
+	}
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
 
