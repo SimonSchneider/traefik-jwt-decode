@@ -32,6 +32,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
 
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.Header().Set("Access-Control-Allow-Credentials", "true")
 	rw.Header().Set("Access-Control-Allow-Headers",
@@ -40,7 +41,6 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Access-Control-Expose-Headers",
 		"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
 	)
-	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
 	fmt.Println("rw Header", rw.Header()["Access-Control-Allow-Origins"])
 
