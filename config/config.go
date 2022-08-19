@@ -106,6 +106,7 @@ func (s MyServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Stop here if its Preflighted OPTIONS request
 	if req.Method == "OPTIONS" {
 		fmt.Println("\n\n\nRETURNING\n\n\n")
+		rw.WriteHeader(http.StatusOK)
 		return
 	}
 	// Lets Gorilla work
