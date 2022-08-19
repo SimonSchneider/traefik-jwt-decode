@@ -1,6 +1,7 @@
 package decoder
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -38,6 +39,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	)
 	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
+	fmt.Println(r.Header["Authorization"])
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
 		var status int
 		if s.authHeaderRequired {
