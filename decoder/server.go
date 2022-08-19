@@ -1,7 +1,6 @@
 package decoder
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -32,31 +31,6 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
 
-	rw.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
-	rw.Header().Set("Access-Control-Allow-Origin", "*")
-	rw.Header().Set("Access-Control-Allow-Credentials", "true")
-	rw.Header().Set("Access-Control-Allow-Headers",
-		"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, Host, Origin, Referer",
-	)
-	rw.Header().Set("Access-Control-Expose-Headers",
-		"Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With",
-	)
-
-	fmt.Println("rw Header", rw.Header()["Access-Control-Allow-Origins"])
-
-	if r.Method == http.MethodOptions {
-		rw.WriteHeader(http.StatusOK)
-		return
-	}
-
-	fmt.Println(r.Header["Authorization"])
-
-	fmt.Println(r.Header["X-Forwarded-For"])
-	fmt.Println(r.Header["X-Forwarded-Uri"])
-	fmt.Println(r.Header["X-Forwarded-Proto"])
-	fmt.Println(r.Header["X-Forwarded-Host"])
-	fmt.Println(r.Header["X-Forwarded-Method"])
-	fmt.Println(r.Header)
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
 		var status int
 		if s.authHeaderRequired {
