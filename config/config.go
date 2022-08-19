@@ -138,7 +138,7 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 		mux.Handle("/", histogramMw(loggingMiddleWare(handler)))
 
 		h := cors.New(cors.Options{
-			// Debug:                true,
+			Debug:                true,
 			AllowedOrigins:       []string{"*"},
 			AllowedMethods:       []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedHeaders:       []string{"*"},
