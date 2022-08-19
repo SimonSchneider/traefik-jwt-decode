@@ -141,7 +141,7 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 			Debug:          true,
 			AllowedOrigins: []string{"*"},
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowedHeaders: []string{"*"},
+			AllowedHeaders: []string{"*", "origin", "Origin", "Authorization"},
 		}).Handler(mux)
 		srv.Handler = h
 		done <- srv.Serve(listener)
