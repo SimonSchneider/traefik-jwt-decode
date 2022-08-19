@@ -49,6 +49,7 @@ func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.Header["X-Forwarded-Proto"])
 	fmt.Println(r.Header["X-Forwarded-Host"])
 	fmt.Println(r.Header["X-Forwarded-Method"])
+	fmt.Println(r.Header)
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
 		var status int
 		if s.authHeaderRequired {
