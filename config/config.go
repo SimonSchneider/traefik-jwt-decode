@@ -137,6 +137,7 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 
 				}
 
+				fmt.Println("RETURNING FALSE")
 				return false
 			},
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},

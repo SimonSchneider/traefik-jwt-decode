@@ -18,4 +18,5 @@ env:
   MAX_CACHE_KEYS: "10000"
   CACHE_ENABLED: "true"
   JWKS_URL: "https://papercup-dev.eu.auth0.com/.well-known/jwks.json"
-  ALLOWED_ORIGINS: "https://(.*)papercup.vercel.app,http://localhost:(\\d+)"
+  ALLOWED_ORIGINS: "https://(.*)papercup.vercel.app"
+  # ALLOWED_ORIGINS: "https://(.*)papercup.vercel.app,http://localhost:(\\d+)"
