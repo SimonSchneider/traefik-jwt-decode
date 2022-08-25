@@ -18,4 +18,4 @@ env:
   MAX_CACHE_KEYS: "10000"
   CACHE_ENABLED: "true"
   JWKS_URL: "https://auth0.papercup.com/.well-known/jwks.json"
-
+  ALLOWED_ORIGINS: "https://(\\w+).papercup.com"
