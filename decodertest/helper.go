@@ -96,7 +96,6 @@ func startJwksServer(jwks jwk.Set) string {
 			rw.Write(keys)
 		})
 
-		// s := MyServer{r: mux}
 		panic(http.Serve(listener, mux))
 	}()
 	return fmt.Sprintf("http://0.0.0.0:%d%s", listener.Addr().(*net.TCPAddr).Port, path)

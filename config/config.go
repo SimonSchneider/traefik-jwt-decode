@@ -91,29 +91,6 @@ func (c *Config) PingHandler(rw http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// type MyServer struct {
-// 	r *http.ServeMux
-// }
-
-// func (s MyServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-// 	fmt.Println("\n\n\n OVERRIDE \n\n\n,", req.Method, req.Header.Get("Origin"))
-
-// 	// if origin := req.Header.Get("Origin"); origin != "" {
-// 	rw.Header().Set("Access-Control-Allow-Origin", "*")
-// 	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-// 	rw.Header().Set("Access-Control-Allow-Headers",
-// 		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-// 	// }
-// 	// Stop here if its Preflighted OPTIONS request
-// 	if req.Method == "OPTIONS" {
-// 		fmt.Println("\n\n\nRETURNING\n\n\n")
-// 		rw.WriteHeader(http.StatusOK)
-// 		return
-// 	}
-// 	// Lets Gorilla work
-// 	s.r.ServeHTTP(rw, req)
-// }
-
 // RunServer starts a server from the config
 func (c *Config) RunServer() (chan error, net.Listener) {
 	logger := c.getLogger()
@@ -138,7 +115,6 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 		mux.Handle("/", histogramMw(loggingMiddleWare(handler)))
 
 		h := cors.New(cors.Options{
-			Debug:          true,
 			AllowedOrigins: []string{"*"},
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedHeaders: []string{
