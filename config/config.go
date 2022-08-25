@@ -125,10 +125,10 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 		h := cors.New(cors.Options{
 			AllowOriginFunc: func(origin string) bool {
 				for _, pattern := range allowedOriginsRegexp {
-					fmt.Println("\n\n\n origin,", origin, pattern)
 					isMatch, err := regexp.MatchString(pattern, origin)
+					fmt.Println("\n\n\n origin,", origin, pattern, err, isMatch)
 					if err != nil {
-						panic(fmt.Errorf("invalid origin pattern %s", pattern))
+						panic(fmt.Errorf("%w: %s", err, pattern))
 					}
 
 					if isMatch {
