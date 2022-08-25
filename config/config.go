@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,7 @@ import (
 
 // Env variable constants
 const (
+	ALLOWED_ORIGINS             = "ALLOWED_ORIGINS"
 	JwksURLEnv                  = "JWKS_URL"
 	ForceJwksOnStart            = "FORCE_JWKS_ON_START"
 	ForceJwksOnStartDefault     = "true"
@@ -52,6 +54,7 @@ const (
 // NewConfig creates a new Config from the current env
 func NewConfig() *Config {
 	var c Config
+	c.allowedOrigins = required(ALLOWED_ORIGINS)
 	c.jwksURL = required(JwksURLEnv)
 	c.forceJwksOnStart = withDefault(ForceJwksOnStart, ForceJwksOnStartDefault)
 	c.claimMappingFilePath = withDefault(ClaimMappingFileEnv, ClaimMappingFileDefault)
@@ -70,6 +73,7 @@ func NewConfig() *Config {
 
 // Config to bootstrap decoder server
 type Config struct {
+	allowedOrigins       envVar
 	jwksURL              envVar
 	forceJwksOnStart     envVar
 	claimMappingFilePath envVar
@@ -103,6 +107,10 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 	loggingMiddleWare := hlog.NewHandler(logger)
 	serve := fmt.Sprintf(":%s", c.port.get())
 	done := make(chan error)
+
+	allowedOriginsList := c.allowedOrigins.get()
+	allowedOriginsRegexp := strings.Split(allowedOriginsList, ",")
+
 	listener, err := net.Listen("tcp", serve)
 	if err != nil {
 		panic(err)
@@ -115,7 +123,21 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 		mux.Handle("/", histogramMw(loggingMiddleWare(handler)))
 
 		h := cors.New(cors.Options{
-			AllowedOrigins: []string{"*"},
+			AllowOriginFunc: func(origin string) bool {
+				for _, pattern := range allowedOriginsRegexp {
+					isMatch, err := regexp.MatchString(pattern, origin)
+					if err != nil {
+						panic(fmt.Errorf("invalid origin pattern %s", pattern))
+					}
+
+					if isMatch {
+						return true
+					}
+
+				}
+
+				return false
+			},
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedHeaders: []string{
 				"Content-Type, Content-Length, Accept-Encoding, Authorization, accept, origin",
