@@ -124,6 +124,7 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 
 		h := cors.New(cors.Options{
 			AllowOriginFunc: func(origin string) bool {
+				fmt.Println("\n\n\n origin,", origin)
 				for _, pattern := range allowedOriginsRegexp {
 					isMatch, err := regexp.MatchString(pattern, origin)
 					if err != nil {
