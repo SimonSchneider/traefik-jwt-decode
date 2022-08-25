@@ -126,7 +126,6 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 			AllowOriginFunc: func(origin string) bool {
 				for _, pattern := range allowedOriginsRegexp {
 					isMatch, err := regexp.MatchString(pattern, origin)
-					fmt.Println("\n\n\n origin,", origin, pattern, err, isMatch)
 					if err != nil {
 						panic(fmt.Errorf("%w: %s", err, pattern))
 					}
@@ -137,7 +136,6 @@ func (c *Config) RunServer() (chan error, net.Listener) {
 
 				}
 
-				fmt.Println("RETURNING FALSE")
 				return false
 			},
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
