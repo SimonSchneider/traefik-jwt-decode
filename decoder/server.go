@@ -30,6 +30,7 @@ func NewServer(decoder TokenDecoder, authHeaderKey, tokenValidatedHeaderKey stri
 func (s *Server) DecodeToken(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := zLog.Ctx(ctx)
+
 	if _, ok := r.Header[s.authHeaderKey]; !ok {
 		var status int
 		if s.authHeaderRequired {

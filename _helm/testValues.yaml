@@ -1,9 +1,0 @@
-env:
-  CLAIM_MAPPINGS: "claim3:header3"
-  JWKS_URL: "https://www.googleapis.com/oauth2/v3/certs"
-
-claimMappings: |
-    {
-      "claim1": "header1",
-      "claim2": "header2"
-    }

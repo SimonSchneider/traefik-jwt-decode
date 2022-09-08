@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: 064824517495.dkr.ecr.eu-west-1.amazonaws.com/filter-paper
+  pullPolicy: IfNotPresent
+  tag: latest
+
+host: filter-paper-dev.papercup.com
+
+env:
+  PORT: "8080"
+  CLAIM_MAPPING_FILE_PATH: "/claim-mappings/config.json"
+  AUTH_HEADER_KEY: "Authorization"
+  TOKEN_VALIDATED_HEADER_KEY: "jwt-token-validated"
+  AUTH_HEADER_REQUIRED: "true"
+  LOG_LEVEL: "debug"
+  LOG_TYPE: "pretty"
+  MAX_CACHE_KEYS: "10000"
+  CACHE_ENABLED: "true"
+  JWKS_URL: "https://papercup-dev.eu.auth0.com/.well-known/jwks.json"
+  ALLOWED_ORIGINS: "https://(.*)papercup.vercel.app,http://localhost:(\\d+)"

@@ -95,6 +95,7 @@ func startJwksServer(jwks jwk.Set) string {
 			rw.WriteHeader(http.StatusOK)
 			rw.Write(keys)
 		})
+
 		panic(http.Serve(listener, mux))
 	}()
 	return fmt.Sprintf("http://0.0.0.0:%d%s", listener.Addr().(*net.TCPAddr).Port, path)
@@ -142,6 +143,7 @@ func (tc *TestConfig) newCachedDecoder(claimMappings map[string]string) decoder.
 
 // UncachedServer creates an uncached server
 func (tc *TestConfig) UncachedServer(claimMappings map[string]string) *decoder.Server {
+
 	return decoder.NewServer(tc.newJwsDecoder(claimMappings), AuthHeaderKey, TokenValidatedHeaderKey, AuthHeaderRequired)
 }
 
