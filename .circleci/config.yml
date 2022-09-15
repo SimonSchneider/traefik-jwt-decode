@@ -65,7 +65,7 @@ workflows:
           type: approval
           filters:
             branches:
-              only: main
+              only: master
           requires:
             - prepare
       - aws-ecr/build-and-push-image:
