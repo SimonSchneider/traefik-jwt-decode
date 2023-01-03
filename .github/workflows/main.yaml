@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: 1.17
       - run: make all
-      - uses: elgohr/Publish-Docker-Github-Action@master
+      - uses: elgohr/Publish-Docker-Github-Action@v5
         if: github.ref == 'refs/heads/master'
         with:
           name: simonschneider/traefik-jwt-decode
