@@ -102,12 +102,14 @@ FORCE_JWKS_ON_START        = true
 
 optional configurations
 ```
-CLAIM_MAPPINGS=claim1:header1,claim2:header2
+CLAIM_MAPPINGS=claim1:header1,claim2:header2,claim3.subClaim3:header3
 set up claim mappings by env, on the format
-the above corresponds to the json
+the above corresponds to the json. Claim name 
+can use dot(.) to map nested structures
 
 {
   "claim1": "header1",
-  "claim2": "header2"
+  "claim2": "header2",
+  "claim3.subClaim3": "header3"
 }
 ```
