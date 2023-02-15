@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/jwk"
@@ -52,7 +53,7 @@ func (d *jwsDecoder) Decode(ctx context.Context, rawJws string) (*Token, error) 
 		Claims:     make(map[string]string),
 	}
 	for key, destKey := range d.claimMapping {
-		if value, ok := jwtToken.Get(key); ok {
+		if value, ok := getValue(key, jwtToken); ok {
 			if strVal, ok := value.(string); ok {
 				token.Claims[destKey] = strVal
 			} else {
@@ -83,4 +84,20 @@ func (d *jwsDecoder) parseAndValidate(ctx context.Context, rawJws string) (jwt.T
 		return nil, fmt.Errorf("unable to parse token: %w", err)
 	}
 	return t, nil
+}
+
+func getValue(key string, token jwt.Token) (interface{}, bool) {
+	keys := strings.Split(key, ".")
+	value, ok := token.Get(keys[0])
+	if !ok {
+		return "", false
+	}
+	for _, k := range keys[1:] {
+		jsonValue, ok := value.(map[string]interface{})
+		if !ok {
+			return "", false
+		}
+		value = jsonValue[k]
+	}
+	return value, true
 }
