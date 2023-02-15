@@ -68,5 +68,5 @@ func TestTokenWithEmptyNestedClaims(t *testing.T) {
 	token := tc.NewValidToken(map[string]interface{}{"claim": "email"})
 	resp, err := dec.Decode(dt.Ctx(), string(token))
 	dt.Report(t, err != nil, "not able to decode token with conflicting nested claims: %+v", resp)
-	dt.Report(t, resp.Claims["claim"] != "", "decoded token should contain no claim: %+v", resp)
+	dt.Report(t, resp.Claims["claim-email"] != "", "decoded token should contain no claim: %+v", resp)
 }
